@@ -17,15 +17,13 @@ A progressive web app for tracking movies, TV shows, books, audiobooks, and vide
 
 ## Quick Start
 
-### 1. Copy environment file
+### 1. Configure docker-compose.yml
 
-```bash
-cp .env.example .env
-```
+All environment variables are declared inline in `docker-compose.yml` with comments marking each as **REQUIRED** or **OPTIONAL**. At minimum, change the required values:
 
-Edit `.env` with your values. At minimum set:
-- `AUTH_SECRET` — random string (generate with `openssl rand -base64 32`)
-- `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_USERNAME` — first admin account
+- `AUTH_SECRET` — generate with `openssl rand -base64 32`
+- `AUTH_URL` — set to your public URL in production (leave `http://localhost:3000` for local use)
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_USERNAME` — credentials for the first admin account
 
 ### 2. Start with Docker Compose
 
@@ -33,18 +31,26 @@ Edit `.env` with your values. At minimum set:
 docker compose up -d
 ```
 
-Then run migrations and seed the admin user:
+Database migrations run automatically on startup. Then seed the admin user once:
 
 ```bash
-docker compose exec app sh -c "npx prisma migrate deploy && npm run db:seed"
+docker compose exec app npm run db:seed
 ```
 
 Visit [http://localhost:3000](http://localhost:3000) and log in with your admin credentials.
 
 ### 3. Local development
 
+For local dev, copy `.env.example` and fill in your values:
+
 ```bash
-# Start a PostgreSQL database (or use Docker just for postgres)
+cp .env.example .env
+```
+
+Then:
+
+```bash
+# Start only the database via Docker
 docker compose up db -d
 
 # Install dependencies
@@ -81,7 +87,7 @@ Each webhook URL is shown in **Settings** after you log in.
 ### Trakt
 1. Go to trakt.tv/settings/apps and add a webhook
 2. URL: `https://yourdomain.com/api/scrobble/trakt?userId=<your-user-id>`
-3. Set `TRAKT_WEBHOOK_SECRET` in `.env`
+3. Set `TRAKT_WEBHOOK_SECRET` in `docker-compose.yml` (or `.env` for local dev)
 
 ### Audiobookshelf
 1. In ABS → Settings → Notifications, add a webhook
@@ -93,7 +99,7 @@ Stremio lacks native webhooks. Use the Trakt addon in Stremio and rely on the Tr
 
 ## AI Configuration
 
-Set `AI_PROVIDER` in `.env` to one of:
+Set `AI_PROVIDER` to one of:
 - `anthropic` — Claude (requires `ANTHROPIC_API_KEY`)
 - `openai` — GPT-4o (requires `OPENAI_API_KEY`, optionally `OPENAI_MODEL`)
 - `ollama` — Local LLM (requires `OLLAMA_BASE_URL` and `OLLAMA_MODEL`)
