@@ -24,14 +24,63 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://vellum:vellum@db:5432/vellum
     ports:
       - "3000:3000"
     volumes:
       - ./public:/app/public
+    environment:
+      # ---------------------------------------------------------------------------
+      # REQUIRED — Database
+      # ---------------------------------------------------------------------------
+      DATABASE_URL: postgresql://vellum:vellum@db:5432/vellum
+
+      # ---------------------------------------------------------------------------
+      # REQUIRED — Auth (NextAuth v5)
+      # Generate AUTH_SECRET with: openssl rand -base64 32
+      # ---------------------------------------------------------------------------
+      AUTH_SECRET: changeme
+      AUTH_URL: http://localhost:3000
+
+      # ---------------------------------------------------------------------------
+      # REQUIRED — First admin account (used only during initial seed)
+      # ---------------------------------------------------------------------------
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: changeme
+      ADMIN_USERNAME: admin
+
+      # ---------------------------------------------------------------------------
+      # OPTIONAL — Metadata APIs (enable the services you want to use)
+      # TMDB:      https://www.themoviedb.org/settings/api
+      # IGDB:      https://dev.twitch.tv/console  (create a Twitch app)
+      # Hardcover: https://hardcover.app/account/api
+      # ---------------------------------------------------------------------------
+      TMDB_API_KEY: ""
+      IGDB_CLIENT_ID: ""
+      IGDB_CLIENT_SECRET: ""
+      HARDCOVER_API_KEY: ""
+
+      # ---------------------------------------------------------------------------
+      # OPTIONAL — AI provider for smart features
+      # Set AI_PROVIDER to one of: anthropic | openai | ollama
+      # Only the keys for the chosen provider are needed.
+      # Anthropic: https://console.anthropic.com
+      # OpenAI:    https://platform.openai.com
+      # ---------------------------------------------------------------------------
+      AI_PROVIDER: anthropic
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
+      OPENAI_MODEL: gpt-4o
+      OLLAMA_BASE_URL: http://localhost:11434
+      OLLAMA_MODEL: llama3
+
+      # ---------------------------------------------------------------------------
+      # OPTIONAL — Scrobble webhook secrets
+      # Generate each with: openssl rand -hex 32
+      # Only set the secrets for webhooks you intend to use.
+      # ---------------------------------------------------------------------------
+      TRAKT_WEBHOOK_SECRET: ""
+      ABS_WEBHOOK_SECRET: ""
+      STREMIO_WEBHOOK_SECRET: ""
 
 volumes:
   postgres_data:
