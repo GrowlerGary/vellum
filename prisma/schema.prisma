@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MediaType {
+  MOVIE
+  TV_SHOW
+  BOOK
+  AUDIOBOOK
+  VIDEO_GAME
+}
+
+enum MetadataSource {
+  TMDB
+  IGDB
+  HARDCOVER
+  MANUAL
+}
+
+enum EntryStatus {
+  WANT
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
+}
+
+enum ScrobbleSource {
+  TRAKT
+  AUDIOBOOKSHELF
+  STREMIO
+}
+
+model User {
+  id              String    @id @default(cuid())
+  username        String    @unique
+  email           String    @unique
+  passwordHash    String
+  displayName     String?
+  avatarUrl       String?
+  bio             String?
+  role            Role      @default(USER)
+  isProfilePublic Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  entries         MediaEntry[]
+  lists           MediaList[]
+  scrobbleConfigs ScrobbleConfig[]
+  aiSuggestions   AiSuggestion[]
+
+  @@index([username])
+  @@index([email])
+}
+
+model MediaItem {
+  id          String         @id @default(cuid())
+  type        MediaType
+  externalId  String
+  source      MetadataSource
+  title       String
+  year        Int?
+  posterUrl   String?
+  backdropUrl String?
+  overview    String?
+  genres      String[]
+  metadata    Json           @default("{}")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  entries     MediaEntry[]
+  listItems   ListItem[]
+  suggestions AiSuggestion[]
+
+  @@unique([source, externalId])
+  @@index([type])
+  @@index([title])
+}
+
+model MediaEntry {
+  id          String      @id @default(cuid())
+  userId      String
+  mediaItemId String
+  status      EntryStatus @default(WANT)
+  rating      Float?
+  reviewText  String?
+  isPublic    Boolean     @default(true)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItem   MediaItem   @relation(fields: [mediaItemId], references: [id])
+
+  @@unique([userId, mediaItemId])
+  @@index([userId])
+  @@index([status])
+}
+
+model MediaList {
+  id          String     @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  isPublic    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       ListItem[]
+
+  @@index([userId])
+}
+
+model ListItem {
+  id          String    @id @default(cuid())
+  listId      String
+  mediaItemId String
+  sortOrder   Int       @default(0)
+  addedAt     DateTime  @default(now())
+
+  list        MediaList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
+
+  @@unique([listId, mediaItemId])
+}
+
+model ScrobbleConfig {
+  id            String         @id @default(cuid())
+  userId        String
+  source        ScrobbleSource
+  webhookSecret String
+  accessToken   String?
+  isEnabled     Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source])
+}
+
+model AiSuggestion {
+  id          String    @id @default(cuid())
+  userId      String
+  mediaItemId String
+  reason      String
+  score       Float?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
+
+  @@index([userId, createdAt])
+}
