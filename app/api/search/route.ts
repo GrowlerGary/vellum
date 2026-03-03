@@ -17,38 +17,64 @@ export async function GET(req: NextRequest) {
   }
 
   const results: unknown[] = [];
+  const warnings: string[] = [];
 
-  try {
-    if (!type || type === "MOVIE" || type === "TV_SHOW") {
-      const tmdbResults = await searchTmdb(query);
-      const filtered = type
-        ? tmdbResults.filter((r) => r.mediaType === type)
-        : tmdbResults;
-      results.push(...filtered);
+  if (!type || type === "MOVIE" || type === "TV_SHOW") {
+    if (!process.env.TMDB_API_KEY) {
+      warnings.push("Movie & TV results unavailable (TMDB not configured).");
+    } else {
+      try {
+        const tmdbResults = await searchTmdb(query);
+        const filtered = type ? tmdbResults.filter((r) => r.mediaType === type) : tmdbResults;
+        results.push(...filtered);
+      } catch (err) {
+        console.error("TMDB search error:", err);
+        warnings.push("Movie & TV search failed.");
+      }
     }
-
-    if (!type || type === "VIDEO_GAME") {
-      const igdbResults = await searchIgdb(query);
-      results.push(...igdbResults);
-    }
-
-    if (!type || type === "BOOK") {
-      const bookResults = await searchHardcover(query, false);
-      results.push(...bookResults);
-    }
-
-    if (!type || type === "AUDIOBOOK") {
-      const audioResults = await searchHardcover(query, true);
-      // Only include books that have audio versions if filtering by AUDIOBOOK
-      const filtered = type === "AUDIOBOOK"
-        ? audioResults.filter((r) => r.hasAudio)
-        : audioResults;
-      // Avoid duplicates with book results
-      if (type === "AUDIOBOOK") results.push(...filtered);
-    }
-  } catch (err) {
-    console.error("Search error:", err);
   }
 
-  return NextResponse.json({ results });
+  if (!type || type === "VIDEO_GAME") {
+    if (!process.env.IGDB_CLIENT_ID || !process.env.IGDB_CLIENT_SECRET) {
+      warnings.push("Video game results unavailable (IGDB not configured).");
+    } else {
+      try {
+        const igdbResults = await searchIgdb(query);
+        results.push(...igdbResults);
+      } catch (err) {
+        console.error("IGDB search error:", err);
+        warnings.push("Video game search failed.");
+      }
+    }
+  }
+
+  const wantsBooks = !type || type === "BOOK";
+  const wantsAudio = !type || type === "AUDIOBOOK";
+
+  if (wantsBooks || wantsAudio) {
+    if (!process.env.HARDCOVER_API_KEY) {
+      const label = wantsBooks && wantsAudio ? "Book & audiobook" : wantsAudio ? "Audiobook" : "Book";
+      warnings.push(`${label} results unavailable (Hardcover not configured).`);
+    } else {
+      try {
+        if (wantsBooks) {
+          const bookResults = await searchHardcover(query, false);
+          results.push(...bookResults);
+        }
+        if (wantsAudio) {
+          const audioResults = await searchHardcover(query, true);
+          // Only include books with audio versions when filtering by AUDIOBOOK,
+          // and avoid duplicating entries already added by the book search above.
+          if (type === "AUDIOBOOK") {
+            results.push(...audioResults.filter((r) => r.hasAudio));
+          }
+        }
+      } catch (err) {
+        console.error("Hardcover search error:", err);
+        warnings.push("Book/audiobook search failed.");
+      }
+    }
+  }
+
+  return NextResponse.json({ results, warnings });
 }

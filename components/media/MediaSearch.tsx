@@ -25,21 +25,24 @@ export function MediaSearch() {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<SearchResult | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(async (q: string, t: string) => {
-    if (q.length < 2) { setResults([]); return; }
+    if (q.length < 2) { setResults([]); setWarnings([]); return; }
     setLoading(true);
     try {
       const params = new URLSearchParams({ q });
       if (t !== "all") params.set("type", t);
       const res = await fetch(`/api/search?${params}`);
-      const data = await res.json() as { results: SearchResult[] };
+      const data = await res.json() as { results: SearchResult[]; warnings?: string[] };
       setResults(data.results ?? []);
+      setWarnings(data.warnings ?? []);
     } catch {
       setResults([]);
+      setWarnings(["Search request failed. Please try again."]);
     } finally {
       setLoading(false);
     }
@@ -81,6 +84,12 @@ export function MediaSearch() {
           </SelectContent>
         </Select>
       </div>
+
+      {warnings.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {warnings.map((w, i) => <p key={i}>{w}</p>)}
+        </div>
+      )}
 
       {loading && (
         <div className="flex justify-center py-8">
