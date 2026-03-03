@@ -86,7 +86,9 @@ async function gql<T>(query: string, variables: Record<string, unknown> = {}): P
     body: JSON.stringify({ query, variables }),
   });
   if (!res.ok) throw new Error(`Hardcover API error: ${res.status}`);
-  return res.json() as Promise<T>;
+  const json = await res.json() as { errors?: Array<{ message: string }> } & T;
+  if (json.errors?.length) throw new Error(`Hardcover GraphQL error: ${json.errors[0].message}`);
+  return json;
 }
 
 export async function searchHardcover(
