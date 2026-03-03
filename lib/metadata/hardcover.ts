@@ -60,7 +60,7 @@ function mapBook(
   preferAudio = false
 ): HardcoverResult {
   const hasAudio = (book.audio_books?.length ?? 0) > 0;
-  const effectiveType = preferAudio && hasAudio ? "AUDIOBOOK" : "BOOK";
+  const effectiveType = preferAudio ? "AUDIOBOOK" : "BOOK";
   return {
     id: book.id,
     mediaType: effectiveType,
