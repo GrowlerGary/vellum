@@ -81,7 +81,7 @@ function mapItem(item: TmdbSearchItem): TmdbResult | null {
 export async function searchTmdb(query: string): Promise<TmdbResult[]> {
   const url = `${TMDB_BASE}/search/multi?query=${encodeURIComponent(query)}&include_adult=false`;
   const res = await fetch(url, { headers: getHeaders() });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`TMDB API error: ${res.status}`);
   const data = await res.json() as { results: TmdbSearchItem[] };
   return (data.results ?? [])
     .map(mapItem)

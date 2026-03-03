@@ -100,16 +100,12 @@ export async function searchHardcover(
       }
     }
   `;
-  try {
-    const data = await gql<HardcoverSearchResponse>(q, { q: query });
-    const hits = data.data?.search?.results?.hits ?? [];
-    return hits
-      .map((h) => h.document)
-      .filter((b): b is HardcoverBook => !!b)
-      .map((b) => mapBook(b, preferAudio));
-  } catch {
-    return [];
-  }
+  const data = await gql<HardcoverSearchResponse>(q, { q: query });
+  const hits = data.data?.search?.results?.hits ?? [];
+  return hits
+    .map((h) => h.document)
+    .filter((b): b is HardcoverBook => !!b)
+    .map((b) => mapBook(b, preferAudio));
 }
 
 export async function getHardcoverDetail(
