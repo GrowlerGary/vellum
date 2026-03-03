@@ -15,15 +15,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
 RUN npm run build
-# Bundle seed script into a self-contained CommonJS file using esbuild (already
-# present as a Next.js dependency). bcryptjs is bundled in; @prisma/client is
-# kept external since it is copied into the runner image separately.
-RUN ./node_modules/.bin/esbuild prisma/seed.ts \
-  --bundle \
-  --platform=node \
-  --target=node22 \
-  --outfile=/tmp/seed.js \
-  --external:@prisma/client
 
 # Production image
 FROM base AS runner
@@ -41,7 +32,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /tmp/seed.js ./seed.js
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bcryptjs ./node_modules/bcryptjs
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/seed.js ./seed.js
 
 USER nextjs
 EXPOSE 3000
