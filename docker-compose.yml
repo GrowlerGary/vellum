@@ -53,6 +53,8 @@ services:
       # TMDB:      https://www.themoviedb.org/settings/api
       # IGDB:      https://dev.twitch.tv/console  (create a Twitch app)
       # Hardcover: https://hardcover.app/account/api
+      #   (the settings page shows "Bearer <token>" — paste either the full
+      #    string or just the token part after "Bearer ")
       # ---------------------------------------------------------------------------
       TMDB_API_KEY: ""
       IGDB_CLIENT_ID: ""

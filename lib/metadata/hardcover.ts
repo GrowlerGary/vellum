@@ -3,8 +3,11 @@ const HARDCOVER_GRAPHQL = "https://api.hardcover.app/v1/graphql";
 function getHeaders() {
   const key = process.env.HARDCOVER_API_KEY;
   if (!key) throw new Error("HARDCOVER_API_KEY not set");
+  // The Hardcover settings page shows the token as "Bearer <token>".
+  // Accept either the full string or just the raw token.
+  const token = key.startsWith("Bearer ") ? key.slice(7) : key;
   return {
-    Authorization: `Bearer ${key}`,
+    Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
   };
 }
