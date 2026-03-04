@@ -33,6 +33,8 @@ export default async function LibraryPage({ params }: { params: Promise<{ type: 
     isPublic: e.isPublic,
     mediaItem: {
       id: e.mediaItem.id,
+      externalId: e.mediaItem.externalId,
+      source: e.mediaItem.source as string,
       title: e.mediaItem.title,
       year: e.mediaItem.year,
       posterUrl: e.mediaItem.posterUrl,

@@ -5,19 +5,46 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { MediaCard } from "@/components/media/MediaCard";
-import { EntryDetailDialog, type EntryWithMedia } from "@/components/media/EntryDetailDialog";
+import { MediaDetailDialog } from "@/components/media/MediaDetailDialog";
 import { Button } from "@/components/ui/button";
 import { STATUS_LABELS } from "@/lib/utils";
 
 const STATUS_ORDER = ["IN_PROGRESS", "WANT", "COMPLETED", "DROPPED"] as const;
 
+interface MediaItemRef {
+  id: string;
+  externalId: string;
+  source: string;
+  title: string;
+  year: number | null;
+  posterUrl: string | null;
+  overview: string;
+  genres: string[];
+  type: string;
+}
+
+interface LibraryEntry {
+  id: string;
+  status: string;
+  rating: number | null;
+  reviewText: string | null;
+  isPublic: boolean;
+  mediaItem: MediaItemRef;
+}
+
 interface LibraryClientProps {
-  entries: EntryWithMedia[];
+  entries: LibraryEntry[];
+}
+
+interface Selected {
+  source: string;
+  externalId: string;
+  type: string;
 }
 
 export function LibraryClient({ entries }: LibraryClientProps) {
   const router = useRouter();
-  const [selected, setSelected] = useState<EntryWithMedia | null>(null);
+  const [selected, setSelected] = useState<Selected | null>(null);
 
   if (entries.length === 0) {
     return (
@@ -53,7 +80,13 @@ export function LibraryClient({ entries }: LibraryClientProps) {
                     mediaType={entry.mediaItem.type}
                     status={entry.status}
                     rating={entry.rating}
-                    onClick={() => setSelected(entry)}
+                    onClick={() =>
+                      setSelected({
+                        source: entry.mediaItem.source,
+                        externalId: entry.mediaItem.externalId,
+                        type: entry.mediaItem.type,
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -63,9 +96,11 @@ export function LibraryClient({ entries }: LibraryClientProps) {
       </div>
 
       {selected && (
-        <EntryDetailDialog
-          key={selected.id}
-          entry={selected}
+        <MediaDetailDialog
+          key={`${selected.source}-${selected.externalId}`}
+          source={selected.source}
+          externalId={selected.externalId}
+          type={selected.type}
           open={!!selected}
           onClose={() => setSelected(null)}
           onSuccess={() => {

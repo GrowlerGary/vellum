@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Loader2 } from "lucide-react";
 import { MediaCard } from "./MediaCard";
-import { AddEntryDialog } from "./AddEntryDialog";
+import { MediaDetailDialog } from "./MediaDetailDialog";
 import { MEDIA_TYPE_LABELS } from "@/lib/utils";
 
 interface SearchResult {
@@ -118,8 +118,10 @@ export function MediaSearch() {
       )}
 
       {selected && (
-        <AddEntryDialog
-          item={selected}
+        <MediaDetailDialog
+          source={selected.source}
+          externalId={selected.externalId}
+          type={selected.mediaType}
           open={!!selected}
           onClose={() => setSelected(null)}
           onSuccess={() => setSelected(null)}

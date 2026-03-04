@@ -31,12 +31,16 @@ interface HardcoverBook {
   id: number;
   title?: string;
   release_year?: number;
+  release_date?: string;
   image?: { url?: string };
   description?: string;
-  book_series?: Array<{ series?: { name?: string } }>;
-  contributions?: Array<{ author?: { name?: string } }>;
+  book_series?: Array<{ series?: { name?: string }; position?: number }>;
+  contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
   audio_books?: Array<{ id: number }>;
   cached_tags?: { Genre?: string[] };
+  rating?: number;
+  ratings_count?: number;
+  pages?: number;
 }
 
 interface HardcoverSearchResponse {
@@ -61,6 +65,19 @@ function mapBook(
 ): HardcoverResult {
   const hasAudio = (book.audio_books?.length ?? 0) > 0;
   const effectiveType = preferAudio ? "AUDIOBOOK" : "BOOK";
+  const contributions = book.contributions ?? [];
+  const authors = contributions
+    .filter((c) => {
+      const role = (c.contribution ?? "").toLowerCase();
+      return !role || role.includes("author") || role.includes("writer");
+    })
+    .map((c) => c.author?.name ?? "")
+    .filter(Boolean);
+  const narrators = contributions
+    .filter((c) => (c.contribution ?? "").toLowerCase().includes("narrator"))
+    .map((c) => c.author?.name ?? "")
+    .filter(Boolean);
+  const allContributors = contributions.map((c) => c.author?.name ?? "").filter(Boolean);
   return {
     id: book.id,
     mediaType: effectiveType,
@@ -74,9 +91,13 @@ function mapBook(
     source: "HARDCOVER",
     metadata: {
       hardcoverId: book.id,
-      authors: (book.contributions ?? []).map((c) => c.author?.name ?? "").filter(Boolean),
+      authors: authors.length > 0 ? authors : allContributors,
+      narrators,
       series: (book.book_series ?? []).map((s) => s.series?.name ?? "").filter(Boolean),
       hasAudio,
+      pages: book.pages ?? null,
+      rating: book.rating ?? null,
+      ratingsCount: book.ratings_count ?? null,
     },
     hasAudio,
   };
@@ -120,11 +141,11 @@ export async function getHardcoverDetail(
   const q = `
     query BookDetail($id: Int!) {
       books(where: { id: { _eq: $id } }, limit: 1) {
-        id title release_year description
+        id title release_year description pages rating ratings_count
         image { url }
         cached_tags
-        contributions { author { name } }
-        book_series { series { name } }
+        contributions { author { name } contribution }
+        book_series { series { name } position }
         audio_books { id }
       }
     }
