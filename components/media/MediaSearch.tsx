@@ -105,7 +105,7 @@ export function MediaSearch() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {results.map((r) => (
             <MediaCard
-              key={`${r.source}-${r.externalId}`}
+              key={`${r.source}-${r.externalId}-${r.mediaType}`}
               id={r.externalId}
               title={r.title}
               year={r.year}
