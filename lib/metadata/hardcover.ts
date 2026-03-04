@@ -38,6 +38,7 @@ interface HardcoverBook {
   description?: string;
   book_series?: Array<{ series?: { name?: string }; position?: number }>;
   contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
+  editions?: Array<{ reading_format_id?: number; contributions?: Array<{ author?: { name?: string }; contribution?: string }> }>;
   audio_books?: Array<{ id: number }>;
   cached_tags?: { Genre?: HardcoverTag[] };
   rating?: number;
@@ -77,10 +78,20 @@ function mapBook(
     .filter(Boolean);
   const NARRATOR_TERMS = ["narrator", "read by", "reader", "performed by"];
   const isNarratorRole = (role: string) => NARRATOR_TERMS.some((t) => role.includes(t));
-  const narrators = contributions
+  const bookNarrators = contributions
     .filter((c) => isNarratorRole((c.contribution ?? "").toLowerCase()))
     .map((c) => c.author?.name ?? "")
     .filter(Boolean);
+  // reading_format_id=2 is audio; narrators are on edition contributions
+  const audioEditions = (book.editions ?? []).filter((e) => e.reading_format_id === 2);
+  const editionNarrators = audioEditions
+    .flatMap((e) => e.contributions ?? [])
+    .filter((c) => !c.contribution || isNarratorRole((c.contribution ?? "").toLowerCase()))
+    .map((c) => c.author?.name ?? "")
+    .filter(Boolean);
+  console.log("[hardcover] contributions:", JSON.stringify(contributions));
+  console.log("[hardcover] audioEditions:", JSON.stringify(audioEditions));
+  const narrators = [...new Set([...bookNarrators, ...editionNarrators])];
   const allContributors = contributions.map((c) => c.author?.name ?? "").filter(Boolean);
   return {
     id: book.id,
@@ -156,6 +167,10 @@ export async function getHardcoverDetail(
         cached_tags
         contributions { author { name } contribution }
         book_series { series { name } position }
+        editions(where: { reading_format_id: { _eq: 2 } }, limit: 5) {
+          reading_format_id
+          contributions { author { name } contribution }
+        }
       }
     }
   `;
