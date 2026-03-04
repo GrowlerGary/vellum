@@ -67,14 +67,18 @@ export default async function DashboardPage() {
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {statsByType.map((s) => (
-          <div key={s.type} className="rounded-xl border border-zinc-200 bg-white p-4">
+          <Link
+            key={s.type}
+            href={`/library/${s.type}`}
+            className="rounded-xl border border-zinc-200 bg-white p-4 block hover:shadow-md hover:border-indigo-200 transition-all"
+          >
             <div className="text-2xl mb-1">{s.icon}</div>
             <div className="text-sm font-medium text-zinc-700">{s.label}</div>
             <div className="text-2xl font-bold text-zinc-900">{s.total}</div>
             <div className="text-xs text-zinc-400 mt-1">
               {s.completed} done · {s.inProgress} in progress
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 

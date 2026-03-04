@@ -10,54 +10,46 @@ import { Label } from "@/components/ui/label";
 import { RatingWidget } from "./RatingWidget";
 import { STATUS_LABELS, MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS } from "@/lib/utils";
 
-interface SearchResult {
-  externalId: string;
-  source: string;
-  mediaType: string;
-  title: string;
-  year: number | null;
-  posterUrl: string | null;
-  backdropUrl: string | null;
-  overview: string;
-  genres: string[];
-  metadata: Record<string, unknown>;
+export interface EntryWithMedia {
+  id: string;
+  status: string;
+  rating: number | null;
+  reviewText: string | null;
+  isPublic: boolean;
+  mediaItem: {
+    id: string;
+    title: string;
+    year: number | null;
+    posterUrl: string | null;
+    overview: string;
+    genres: string[];
+    type: string;
+  };
 }
 
-interface AddEntryDialogProps {
-  item: SearchResult;
+interface EntryDetailDialogProps {
+  entry: EntryWithMedia;
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export function AddEntryDialog({ item, open, onClose, onSuccess }: AddEntryDialogProps) {
-  const [status, setStatus] = useState("WANT");
-  const [rating, setRating] = useState<number | null>(null);
-  const [review, setReview] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
+export function EntryDetailDialog({ entry, open, onClose, onSuccess }: EntryDetailDialogProps) {
+  const [status, setStatus] = useState(entry.status);
+  const [rating, setRating] = useState<number | null>(entry.rating);
+  const [review, setReview] = useState(entry.reviewText ?? "");
+  const [isPublic, setIsPublic] = useState(entry.isPublic);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit() {
+  async function handleSave() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/entries", {
-        method: "POST",
+      const res = await fetch(`/api/entries/${entry.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mediaItem: {
-            externalId: item.externalId,
-            source: item.source,
-            type: item.mediaType,
-            title: item.title,
-            year: item.year,
-            posterUrl: item.posterUrl,
-            backdropUrl: item.backdropUrl,
-            overview: item.overview,
-            genres: item.genres,
-            metadata: item.metadata,
-          },
           status,
           rating,
           reviewText: review || null,
@@ -70,14 +62,30 @@ export function AddEntryDialog({ item, open, onClose, onSuccess }: AddEntryDialo
       onSuccess?.();
       onClose();
     } catch {
-      setError("Failed to save entry. Please try again.");
+      setError("Failed to save. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  const icon = MEDIA_TYPE_ICONS[item.mediaType] ?? "📦";
-  const typeLabel = MEDIA_TYPE_LABELS[item.mediaType] ?? item.mediaType;
+  async function handleDelete() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/entries/${entry.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      onSuccess?.();
+      onClose();
+    } catch {
+      setError("Failed to remove entry. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const { mediaItem: item } = entry;
+  const icon = MEDIA_TYPE_ICONS[item.type] ?? "📦";
+  const typeLabel = MEDIA_TYPE_LABELS[item.type] ?? item.type;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -147,22 +155,27 @@ export function AddEntryDialog({ item, open, onClose, onSuccess }: AddEntryDialo
 
             <div className="flex items-center gap-2">
               <input
-                id="addIsPublic"
+                id="editIsPublic"
                 type="checkbox"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
                 className="h-4 w-4 rounded border-zinc-300 text-indigo-600"
               />
-              <Label htmlFor="addIsPublic">Show on public profile</Label>
+              <Label htmlFor="editIsPublic">Show on public profile</Label>
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={loading}>
-                {loading ? "Saving..." : "Save to Library"}
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={loading}>
+                Remove from Library
               </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+                <Button onClick={handleSave} disabled={loading}>
+                  {loading ? "Saving..." : "Save"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
