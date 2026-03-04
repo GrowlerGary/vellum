@@ -21,6 +21,7 @@ interface MediaItemRef {
   overview: string | null;
   genres: string[];
   type: string;
+  metadata: Record<string, unknown>;
 }
 
 interface LibraryEntry {
@@ -40,7 +41,7 @@ interface Selected {
   source: string;
   externalId: string;
   type: string;
-  initialItem: { title: string; year: number | null; posterUrl: string | null; overview: string | null; genres: string[] };
+  initialItem: { title: string; year: number | null; posterUrl: string | null; overview: string | null; genres: string[]; metadata: Record<string, unknown> };
   initialEntry: { id: string; status: string; rating: number | null; reviewText: string | null; isPublic: boolean };
 }
 
@@ -93,6 +94,7 @@ export function LibraryClient({ entries }: LibraryClientProps) {
                           posterUrl: entry.mediaItem.posterUrl,
                           overview: entry.mediaItem.overview,
                           genres: entry.mediaItem.genres,
+                          metadata: entry.mediaItem.metadata,
                         },
                         initialEntry: {
                           id: entry.id,

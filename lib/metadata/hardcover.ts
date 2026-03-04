@@ -97,7 +97,11 @@ function mapBook(
       hardcoverId: book.id,
       authors: authors.length > 0 ? authors : allContributors,
       narrators,
-      series: (book.book_series ?? []).map((s) => s.series?.name ?? "").filter(Boolean),
+      series: (book.book_series ?? []).map((s) => {
+        const name = s.series?.name ?? "";
+        if (!name) return "";
+        return s.position != null ? `${name} #${s.position}` : name;
+      }).filter(Boolean),
       hasAudio,
       pages: book.pages ?? null,
       rating: book.rating ?? null,

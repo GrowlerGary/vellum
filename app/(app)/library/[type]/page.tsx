@@ -41,6 +41,7 @@ export default async function LibraryPage({ params }: { params: Promise<{ type: 
       overview: e.mediaItem.overview,
       genres: e.mediaItem.genres,
       type: e.mediaItem.type as string,
+      metadata: e.mediaItem.metadata as Record<string, unknown>,
     },
   }));
 
