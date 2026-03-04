@@ -86,11 +86,9 @@ function mapBook(
   const audioEditions = (book.editions ?? []).filter((e) => e.reading_format_id === 2);
   const editionNarrators = audioEditions
     .flatMap((e) => e.contributions ?? [])
-    .filter((c) => !c.contribution || isNarratorRole((c.contribution ?? "").toLowerCase()))
+    .filter((c) => isNarratorRole((c.contribution ?? "").toLowerCase()))
     .map((c) => c.author?.name ?? "")
     .filter(Boolean);
-  console.log("[hardcover] contributions:", JSON.stringify(contributions));
-  console.log("[hardcover] audioEditions:", JSON.stringify(audioEditions));
   const narrators = [...new Set([...bookNarrators, ...editionNarrators])];
   const allContributors = contributions.map((c) => c.author?.name ?? "").filter(Boolean);
   return {
