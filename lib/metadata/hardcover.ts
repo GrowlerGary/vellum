@@ -40,7 +40,7 @@ interface HardcoverBook {
   contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
   editions?: Array<{ reading_format_id?: number; contributions?: Array<{ author?: { name?: string }; contribution?: string }> }>;
   audio_books?: Array<{ id: number }>;
-  audio_seconds?: number;
+  has_audiobook?: boolean;
   cached_tags?: { Genre?: HardcoverTag[] };
   rating?: number;
   ratings_count?: number;
@@ -67,7 +67,7 @@ function mapBook(
   book: HardcoverBook,
   preferAudio = false
 ): HardcoverResult {
-  const hasAudio = (book.audio_books?.length ?? 0) > 0 || (book.audio_seconds ?? 0) > 0;
+  const hasAudio = book.has_audiobook === true || (book.audio_books?.length ?? 0) > 0;
   const effectiveType = preferAudio ? "AUDIOBOOK" : "BOOK";
   const contributions = book.contributions ?? [];
   const authors = contributions
@@ -148,10 +148,6 @@ export async function searchHardcover(
   `;
   const data = await gql<HardcoverSearchResponse>(q, { q: query });
   const hits = data.data?.search?.results?.hits ?? [];
-  if (hits.length > 0) {
-    console.log("[hardcover search] first doc keys:", Object.keys(hits[0].document ?? {}));
-    console.log("[hardcover search] first doc:", JSON.stringify(hits[0].document));
-  }
   return hits
     .map((h) => h.document)
     .filter((b): b is HardcoverBook => !!b)
