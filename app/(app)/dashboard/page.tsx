@@ -20,10 +20,33 @@ export default async function DashboardPage() {
     orderBy: { updatedAt: "desc" },
   });
 
-  const inProgress = entries.filter((e) => e.status === "IN_PROGRESS");
+  function serialize(e: (typeof entries)[number]) {
+    return {
+      id: e.id,
+      status: e.status as string,
+      rating: e.rating ? Number(e.rating) : null,
+      reviewText: e.reviewText,
+      isPublic: e.isPublic,
+      mediaItem: {
+        id: e.mediaItem.id,
+        externalId: e.mediaItem.externalId,
+        source: e.mediaItem.source as string,
+        title: e.mediaItem.title,
+        year: e.mediaItem.year,
+        posterUrl: e.mediaItem.posterUrl,
+        overview: e.mediaItem.overview,
+        genres: e.mediaItem.genres,
+        type: e.mediaItem.type as string,
+        metadata: e.mediaItem.metadata as Record<string, unknown>,
+      },
+    };
+  }
+
+  const inProgress = entries.filter((e) => e.status === "IN_PROGRESS").map(serialize);
   const recentCompleted = entries
     .filter((e) => e.status === "COMPLETED")
-    .slice(0, 10);
+    .slice(0, 10)
+    .map(serialize);
 
   const statsByType = MEDIA_TYPES.map((type) => {
     const typeEntries = entries.filter((e) => e.mediaItem.type === type);
