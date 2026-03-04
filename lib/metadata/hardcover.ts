@@ -214,8 +214,8 @@ interface HardcoverSeriesResponse {
           title?: string;
           release_year?: number;
           image?: { url?: string };
-          has_audiobook?: boolean;
           contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
+          editions?: Array<{ reading_format_id?: number }>;
         };
       }>;
     }>;
@@ -230,9 +230,10 @@ export async function getHardcoverSeries(id: number): Promise<HardcoverSeriesRes
         book_series(order_by: { position: asc }) {
           position
           book {
-            id title release_year has_audiobook
+            id title release_year
             image { url }
             contributions { author { name } contribution }
+            editions(where: { reading_format_id: { _eq: 2 } }, limit: 1) { reading_format_id }
           }
         }
       }
@@ -258,7 +259,7 @@ export async function getHardcoverSeries(id: number): Promise<HardcoverSeriesRes
           year: b.release_year ?? null,
           posterUrl: b.image?.url ?? null,
           authors: authors.length > 0 ? authors : contribs.map((c) => c.author?.name ?? "").filter(Boolean),
-          hasAudio: b.has_audiobook === true,
+          hasAudio: (b.editions?.length ?? 0) > 0,
         };
       });
     return { id: series.id, name: series.name, books };
