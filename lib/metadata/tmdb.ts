@@ -89,6 +89,53 @@ export async function searchTmdb(query: string): Promise<TmdbResult[]> {
     .slice(0, 10);
 }
 
+export interface TmdbEpisode {
+  id: number;
+  episode_number: number;
+  season_number: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  still_path: string | null;
+  runtime: number | null;
+}
+
+export interface TmdbSeason {
+  season_number: number;
+  name: string;
+  episode_count: number;
+  air_date: string | null;
+  poster_path: string | null;
+  episodes: TmdbEpisode[];
+}
+
+export async function getTmdbShowSeasons(showId: string): Promise<TmdbSeason[]> {
+  // First get the show to get the season list
+  const showRes = await fetch(`${TMDB_BASE}/tv/${showId}`, { headers: getHeaders() });
+  if (!showRes.ok) return [];
+  const show = await showRes.json() as { seasons?: Array<{ season_number: number; name: string; episode_count: number; air_date?: string; poster_path?: string }> };
+  const seasons = (show.seasons ?? []).filter((s) => s.season_number > 0);
+
+  // Fetch all season episode details in parallel
+  const detailed = await Promise.all(
+    seasons.map(async (s) => {
+      const r = await fetch(`${TMDB_BASE}/tv/${showId}/season/${s.season_number}`, { headers: getHeaders() });
+      const episodes: TmdbEpisode[] = r.ok
+        ? ((await r.json() as { episodes?: TmdbEpisode[] }).episodes ?? [])
+        : [];
+      return {
+        season_number: s.season_number,
+        name: s.name,
+        episode_count: s.episode_count,
+        air_date: s.air_date ?? null,
+        poster_path: s.poster_path ?? null,
+        episodes,
+      };
+    })
+  );
+  return detailed;
+}
+
 export async function getTmdbDetail(
   id: string,
   type: "movie" | "tv"

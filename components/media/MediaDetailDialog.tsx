@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -77,6 +78,7 @@ export function MediaDetailDialog({
   const [fetchError, setFetchError] = useState("");
   const [item, setItem] = useState<DetailItem | null>(null);
   const [entry, setEntry] = useState<DetailEntry | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const [status, setStatus] = useState("WANT");
   const [rating, setRating] = useState<number | null>(null);
@@ -90,6 +92,7 @@ export function MediaDetailDialog({
 
     setSaveError("");
     setFetchError("");
+    setDescExpanded(false);
 
     // Show initial data immediately (no spinner) if we have it; otherwise show spinner
     if (initialItem) {
@@ -245,7 +248,7 @@ export function MediaDetailDialog({
 
   function renderMetadata(i: DetailItem) {
     const m = i.metadata;
-    const rows: Array<{ label: string; value: string }> = [];
+    const rows: Array<{ label: string; value: React.ReactNode }> = [];
 
     if (i.type === "MOVIE") {
       if (m.voteAverage) rows.push({ label: "Rating", value: `★ ${(m.voteAverage as number).toFixed(1)} / 10` });
@@ -256,6 +259,14 @@ export function MediaDetailDialog({
       if (m.numberOfSeasons) rows.push({ label: "Seasons", value: String(m.numberOfSeasons) });
       if (m.numberOfEpisodes) rows.push({ label: "Episodes", value: String(m.numberOfEpisodes) });
       if (m.status) rows.push({ label: "Status", value: m.status as string });
+      rows.push({
+        label: "All episodes",
+        value: (
+          <Link href={`/series/tv/${i.externalId}`} className="text-indigo-500 hover:text-indigo-700" onClick={onClose}>
+            View all seasons & episodes →
+          </Link>
+        ),
+      });
     } else if (i.type === "VIDEO_GAME") {
       if (m.rating) rows.push({ label: "Rating", value: `${(m.rating as number).toFixed(0)} / 100` });
       const devs = m.developers as string[] | undefined;
@@ -265,8 +276,24 @@ export function MediaDetailDialog({
       if (authors?.length) rows.push({ label: "Author", value: authors.join(", ") });
       const narrators = m.narrators as string[] | undefined;
       if (narrators?.length) rows.push({ label: "Narrator", value: narrators.join(", ") });
-      const series = m.series as string[] | undefined;
-      if (series?.length) rows.push({ label: "Series", value: series.join(", ") });
+      const seriesData = m.seriesData as Array<{ id: number; name: string; position: number | null }> | undefined;
+      const seriesStrings = m.series as string[] | undefined;
+      if (seriesData?.length) {
+        rows.push({
+          label: "Series",
+          value: (
+            <span className="flex flex-wrap gap-1">
+              {seriesData.map((s) => (
+                <Link key={s.id} href={`/series/books/${s.id}`} className="text-indigo-500 hover:text-indigo-700" onClick={onClose}>
+                  {s.name}{s.position != null ? ` #${s.position}` : ""}
+                </Link>
+              ))}
+            </span>
+          ),
+        });
+      } else if (seriesStrings?.length) {
+        rows.push({ label: "Series", value: seriesStrings.join(", ") });
+      }
       if (m.pages) rows.push({ label: "Pages", value: String(m.pages) });
       if (m.rating) {
         const ratingStr = m.ratingsCount
@@ -359,7 +386,17 @@ export function MediaDetailDialog({
               {/* Right: overview + form */}
               <div className="flex flex-col gap-4 flex-1 min-w-0">
                 {item.overview && (
-                  <p className="text-sm text-zinc-600 line-clamp-4">{item.overview}</p>
+                  <div>
+                    <p className={`text-sm text-zinc-600 ${descExpanded ? "" : "line-clamp-4"}`}>
+                      {item.overview}
+                    </p>
+                    <button
+                      onClick={() => setDescExpanded((v) => !v)}
+                      className="text-xs text-indigo-500 hover:text-indigo-700 mt-0.5"
+                    >
+                      {descExpanded ? "less" : "more"}
+                    </button>
+                  </div>
                 )}
 
                 <div className="flex flex-col gap-1.5">

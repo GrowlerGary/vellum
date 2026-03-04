@@ -57,6 +57,7 @@ model User {
   lists           MediaList[]
   scrobbleConfigs ScrobbleConfig[]
   aiSuggestions   AiSuggestion[]
+  episodeWatches  EpisodeWatch[]
 
   @@index([username])
   @@index([email])
@@ -148,6 +149,19 @@ model ScrobbleConfig {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, source])
+}
+
+model EpisodeWatch {
+  id             String   @id @default(cuid())
+  userId         String
+  showExternalId String
+  episodeId      Int
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, episodeId])
+  @@index([userId, showExternalId])
 }
 
 model AiSuggestion {

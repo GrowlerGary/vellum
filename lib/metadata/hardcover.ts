@@ -36,7 +36,7 @@ interface HardcoverBook {
   release_date?: string;
   image?: { url?: string };
   description?: string;
-  book_series?: Array<{ series?: { name?: string }; position?: number }>;
+  book_series?: Array<{ series?: { id?: number; name?: string }; position?: number }>;
   contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
   editions?: Array<{ reading_format_id?: number; contributions?: Array<{ author?: { name?: string }; contribution?: string }> }>;
   audio_books?: Array<{ id: number }>;
@@ -114,6 +114,9 @@ function mapBook(
         if (!name) return "";
         return s.position != null ? `${name} #${s.position}` : name;
       }).filter(Boolean),
+      seriesData: (book.book_series ?? [])
+        .filter((s) => s.series?.id && s.series?.name)
+        .map((s) => ({ id: s.series!.id, name: s.series!.name, position: s.position ?? null })),
       hasAudio,
       pages: book.pages ?? null,
       rating: book.rating ?? null,
@@ -165,7 +168,7 @@ export async function getHardcoverDetail(
         image { url }
         cached_tags
         contributions { author { name } contribution }
-        book_series { series { name } position }
+        book_series { series { id name } position }
         editions(where: { reading_format_id: { _eq: 2 } }, limit: 5) {
           reading_format_id
           contributions { author { name } contribution }
@@ -179,6 +182,88 @@ export async function getHardcoverDetail(
     return book ? mapBook(book, preferAudio) : null;
   } catch (err) {
     console.error("Hardcover detail error:", err);
+    return null;
+  }
+}
+
+export interface HardcoverSeriesBook {
+  id: number;
+  title: string;
+  position: number | null;
+  year: number | null;
+  posterUrl: string | null;
+  authors: string[];
+  hasAudio: boolean;
+}
+
+export interface HardcoverSeriesResult {
+  id: number;
+  name: string;
+  books: HardcoverSeriesBook[];
+}
+
+interface HardcoverSeriesResponse {
+  data?: {
+    series?: Array<{
+      id: number;
+      name: string;
+      book_series?: Array<{
+        position?: number;
+        book?: {
+          id: number;
+          title?: string;
+          release_year?: number;
+          image?: { url?: string };
+          has_audiobook?: boolean;
+          contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
+        };
+      }>;
+    }>;
+  };
+}
+
+export async function getHardcoverSeries(id: number): Promise<HardcoverSeriesResult | null> {
+  const q = `
+    query SeriesDetail($id: Int!) {
+      series(where: { id: { _eq: $id } }, limit: 1) {
+        id name
+        book_series(order_by: { position: asc }) {
+          position
+          book {
+            id title release_year has_audiobook
+            image { url }
+            contributions { author { name } contribution }
+          }
+        }
+      }
+    }
+  `;
+  try {
+    const data = await gql<HardcoverSeriesResponse>(q, { id });
+    const series = data.data?.series?.[0];
+    if (!series) return null;
+    const books: HardcoverSeriesBook[] = (series.book_series ?? [])
+      .filter((bs) => bs.book)
+      .map((bs) => {
+        const b = bs.book!;
+        const contribs = b.contributions ?? [];
+        const authors = contribs
+          .filter((c) => { const r = (c.contribution ?? "").toLowerCase(); return !r || r.includes("author") || r.includes("writer"); })
+          .map((c) => c.author?.name ?? "")
+          .filter(Boolean);
+        return {
+          id: b.id,
+          title: b.title ?? "",
+          position: bs.position ?? null,
+          year: b.release_year ?? null,
+          posterUrl: b.image?.url ?? null,
+          authors: authors.length > 0 ? authors : contribs.map((c) => c.author?.name ?? "").filter(Boolean),
+          hasAudio: b.has_audiobook === true,
+        };
+      });
+    return { id: series.id, name: series.name, books };
+  } catch (err) {
+    console.error("Hardcover series error:", err);
     return null;
   }
 }
