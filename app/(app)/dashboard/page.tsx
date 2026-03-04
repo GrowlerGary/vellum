@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import Link from "next/link";
-import { MediaCard } from "@/components/media/MediaCard";
 import { Button } from "@/components/ui/button";
 import { Plus, Sparkles } from "lucide-react";
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS } from "@/lib/utils";
+import { DashboardSections } from "@/components/media/DashboardSections";
 
 export const metadata = { title: "Dashboard" };
 
@@ -82,47 +82,8 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* In progress */}
-      {inProgress.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-zinc-900 mb-3">Currently consuming</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {inProgress.map((entry) => (
-              <MediaCard
-                key={entry.id}
-                id={entry.mediaItem.id}
-                title={entry.mediaItem.title}
-                year={entry.mediaItem.year}
-                posterUrl={entry.mediaItem.posterUrl}
-                mediaType={entry.mediaItem.type}
-                status={entry.status}
-                rating={entry.rating}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Recent completed */}
-      {recentCompleted.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-zinc-900 mb-3">Recently completed</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {recentCompleted.map((entry) => (
-              <MediaCard
-                key={entry.id}
-                id={entry.mediaItem.id}
-                title={entry.mediaItem.title}
-                year={entry.mediaItem.year}
-                posterUrl={entry.mediaItem.posterUrl}
-                mediaType={entry.mediaItem.type}
-                status={entry.status}
-                rating={entry.rating}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* In progress + recently completed (client component for dialog support) */}
+      <DashboardSections inProgress={inProgress} recentCompleted={recentCompleted} />
 
       {entries.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
