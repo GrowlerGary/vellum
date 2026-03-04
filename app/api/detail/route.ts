@@ -25,11 +25,13 @@ export async function GET(request: NextRequest) {
     } else if (source === "HARDCOVER") {
       item = await getHardcoverDetail(externalId, type === "AUDIOBOOK");
     }
-  } catch {
+  } catch (err) {
+    console.error(`Detail fetch error [${source}/${externalId}]:`, err);
     return Response.json({ error: "Failed to fetch metadata" }, { status: 502 });
   }
 
   if (!item) {
+    console.warn(`Detail not found [${source}/${externalId}] type=${type}`);
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 

@@ -154,7 +154,8 @@ export async function getHardcoverDetail(
     const data = await gql<HardcoverDetailResponse>(q, { id: parseInt(id, 10) });
     const book = data.data?.books?.[0];
     return book ? mapBook(book, preferAudio) : null;
-  } catch {
+  } catch (err) {
+    console.error("Hardcover detail error:", err);
     return null;
   }
 }
