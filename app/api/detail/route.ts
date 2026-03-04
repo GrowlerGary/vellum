@@ -58,5 +58,14 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return Response.json({ item, entry });
+  // Normalize mediaType → type for the dialog (all result objects use mediaType internally)
+  const normalizedItem = {
+    ...item,
+    type: (item as { mediaType?: string }).mediaType ?? type,
+    genres: Array.isArray((item as { genres?: unknown }).genres)
+      ? (item as { genres: string[] }).genres
+      : [],
+  };
+
+  return Response.json({ item: normalizedItem, entry });
 }

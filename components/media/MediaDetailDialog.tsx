@@ -137,7 +137,17 @@ export function MediaDetailDialog({
           if (!initialItem) setFetchError("Failed to load details. Please try again.");
           return;
         }
-        if (data.item) setItem(data.item);
+        if (data.item) {
+          // Ensure arrays are always arrays even if API returns unexpected shapes
+          const safeItem = {
+            ...data.item,
+            genres: Array.isArray(data.item.genres) ? data.item.genres : [],
+            metadata: data.item.metadata && typeof data.item.metadata === "object"
+              ? data.item.metadata
+              : {},
+          };
+          setItem(safeItem);
+        }
         // Only update entry from fetch if we didn't get one from props
         if (!initialEntry) {
           if (data.entry) {
