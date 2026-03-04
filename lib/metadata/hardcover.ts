@@ -148,6 +148,10 @@ export async function searchHardcover(
   `;
   const data = await gql<HardcoverSearchResponse>(q, { q: query });
   const hits = data.data?.search?.results?.hits ?? [];
+  if (hits.length > 0) {
+    console.log("[hardcover search] first doc keys:", Object.keys(hits[0].document ?? {}));
+    console.log("[hardcover search] first doc:", JSON.stringify(hits[0].document));
+  }
   return hits
     .map((h) => h.document)
     .filter((b): b is HardcoverBook => !!b)
