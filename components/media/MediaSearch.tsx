@@ -122,6 +122,15 @@ export function MediaSearch() {
           source={selected.source}
           externalId={selected.externalId}
           type={selected.mediaType}
+          initialItem={{
+            title: selected.title,
+            year: selected.year,
+            posterUrl: selected.posterUrl,
+            backdropUrl: selected.backdropUrl,
+            overview: selected.overview,
+            genres: selected.genres,
+            metadata: selected.metadata,
+          }}
           open={!!selected}
           onClose={() => setSelected(null)}
           onSuccess={() => setSelected(null)}

@@ -32,10 +32,32 @@ interface DetailEntry {
   isPublic: boolean;
 }
 
+export interface InitialItem {
+  title: string;
+  year: number | null;
+  posterUrl: string | null;
+  backdropUrl?: string | null;
+  overview?: string | null;
+  genres: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface InitialEntry {
+  id: string;
+  status: string;
+  rating: number | null;
+  reviewText: string | null;
+  isPublic: boolean;
+}
+
 export interface MediaDetailDialogProps {
   source: string;
   externalId: string;
   type: string;
+  /** Pre-filled display data shown immediately; enriched by the detail fetch */
+  initialItem?: InitialItem;
+  /** Pre-filled entry data (pass for library items where we already know the entry) */
+  initialEntry?: InitialEntry;
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -45,11 +67,13 @@ export function MediaDetailDialog({
   source,
   externalId,
   type,
+  initialItem,
+  initialEntry,
   open,
   onClose,
   onSuccess,
 }: MediaDetailDialogProps) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [item, setItem] = useState<DetailItem | null>(null);
   const [entry, setEntry] = useState<DetailEntry | null>(null);
@@ -63,35 +87,73 @@ export function MediaDetailDialog({
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    setFetchError("");
-    setItem(null);
-    setEntry(null);
-    setSaveError("");
 
+    setSaveError("");
+    setFetchError("");
+
+    // Show initial data immediately (no spinner) if we have it; otherwise show spinner
+    if (initialItem) {
+      setItem({
+        title: initialItem.title,
+        year: initialItem.year,
+        posterUrl: initialItem.posterUrl,
+        backdropUrl: initialItem.backdropUrl ?? null,
+        overview: initialItem.overview ?? "",
+        genres: initialItem.genres,
+        type,
+        source,
+        externalId,
+        metadata: initialItem.metadata ?? {},
+      });
+      setLoading(false);
+    } else {
+      setItem(null);
+      setLoading(true);
+    }
+
+    // Apply initial entry state
+    if (initialEntry) {
+      setEntry(initialEntry);
+      setStatus(initialEntry.status);
+      setRating(initialEntry.rating);
+      setReview(initialEntry.reviewText ?? "");
+      setIsPublic(initialEntry.isPublic);
+    } else {
+      setEntry(null);
+      setStatus("WANT");
+      setRating(null);
+      setReview("");
+      setIsPublic(true);
+    }
+
+    // Fetch rich metadata in background to enrich the display
     fetch(
       `/api/detail?source=${encodeURIComponent(source)}&id=${encodeURIComponent(externalId)}&type=${encodeURIComponent(type)}`
     )
       .then((r) => r.json() as Promise<{ item?: DetailItem; entry?: DetailEntry; error?: string }>)
       .then((data) => {
-        if (data.error) throw new Error(data.error);
-        setItem(data.item ?? null);
-        const e = data.entry ?? null;
-        setEntry(e);
-        if (e) {
-          setStatus(e.status);
-          setRating(e.rating);
-          setReview(e.reviewText ?? "");
-          setIsPublic(e.isPublic);
-        } else {
-          setStatus("WANT");
-          setRating(null);
-          setReview("");
-          setIsPublic(true);
+        if (data.error) {
+          // Only show error if we have no fallback data
+          if (!initialItem) setFetchError("Failed to load details. Please try again.");
+          return;
+        }
+        if (data.item) setItem(data.item);
+        // Only update entry from fetch if we didn't get one from props
+        if (!initialEntry) {
+          if (data.entry) {
+            setEntry(data.entry);
+            setStatus(data.entry.status);
+            setRating(data.entry.rating);
+            setReview(data.entry.reviewText ?? "");
+            setIsPublic(data.entry.isPublic);
+          }
         }
       })
-      .catch(() => setFetchError("Failed to load details. Please try again."))
+      .catch(() => {
+        if (!initialItem) setFetchError("Failed to load details. Please try again.");
+      })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, source, externalId, type]);
 
   async function handleSave() {
@@ -189,7 +251,6 @@ export function MediaDetailDialog({
       const devs = m.developers as string[] | undefined;
       if (devs?.length) rows.push({ label: "Developer", value: devs.join(", ") });
     } else {
-      // BOOK or AUDIOBOOK
       const authors = m.authors as string[] | undefined;
       if (authors?.length) rows.push({ label: "Author", value: authors.join(", ") });
       const narrators = m.narrators as string[] | undefined;
@@ -238,11 +299,10 @@ export function MediaDetailDialog({
           <>
             <DialogHeader>
               <DialogTitle className="pr-6">{item.title}</DialogTitle>
-              {item.type === "MOVIE" || item.type === "TV_SHOW" ? (
+              {(item.type === "MOVIE" || item.type === "TV_SHOW") &&
                 (item.metadata.tagline as string | undefined) && (
                   <p className="text-sm text-zinc-400 italic">{item.metadata.tagline as string}</p>
-                )
-              ) : null}
+                )}
             </DialogHeader>
 
             <div className="flex flex-col gap-6 sm:flex-row mt-2">

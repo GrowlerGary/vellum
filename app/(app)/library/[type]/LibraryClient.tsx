@@ -40,6 +40,8 @@ interface Selected {
   source: string;
   externalId: string;
   type: string;
+  initialItem: { title: string; year: number | null; posterUrl: string | null; overview: string | null; genres: string[] };
+  initialEntry: { id: string; status: string; rating: number | null; reviewText: string | null; isPublic: boolean };
 }
 
 export function LibraryClient({ entries }: LibraryClientProps) {
@@ -85,6 +87,20 @@ export function LibraryClient({ entries }: LibraryClientProps) {
                         source: entry.mediaItem.source,
                         externalId: entry.mediaItem.externalId,
                         type: entry.mediaItem.type,
+                        initialItem: {
+                          title: entry.mediaItem.title,
+                          year: entry.mediaItem.year,
+                          posterUrl: entry.mediaItem.posterUrl,
+                          overview: entry.mediaItem.overview,
+                          genres: entry.mediaItem.genres,
+                        },
+                        initialEntry: {
+                          id: entry.id,
+                          status: entry.status,
+                          rating: entry.rating,
+                          reviewText: entry.reviewText,
+                          isPublic: entry.isPublic,
+                        },
                       })
                     }
                   />
@@ -101,6 +117,8 @@ export function LibraryClient({ entries }: LibraryClientProps) {
           source={selected.source}
           externalId={selected.externalId}
           type={selected.type}
+          initialItem={selected.initialItem}
+          initialEntry={selected.initialEntry}
           open={!!selected}
           onClose={() => setSelected(null)}
           onSuccess={() => {
