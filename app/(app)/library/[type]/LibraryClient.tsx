@@ -18,7 +18,7 @@ interface MediaItemRef {
   title: string;
   year: number | null;
   posterUrl: string | null;
-  overview: string;
+  overview: string | null;
   genres: string[];
   type: string;
 }
