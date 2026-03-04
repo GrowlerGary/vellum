@@ -146,7 +146,6 @@ export async function getHardcoverDetail(
         cached_tags
         contributions { author { name } contribution }
         book_series { series { name } position }
-        audio_books { id }
       }
     }
   `;
