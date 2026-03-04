@@ -63,10 +63,11 @@ export async function GET(req: NextRequest) {
         }
         if (wantsAudio) {
           const audioResults = await searchHardcover(query, true);
-          // Only add to results when explicitly filtering by AUDIOBOOK to avoid
-          // duplicating entries already added by the book search above.
           if (type === "AUDIOBOOK") {
             results.push(...audioResults);
+          } else {
+            // In all-types mode include an AUDIOBOOK entry only for books that actually have audio
+            results.push(...audioResults.filter((r) => (r as { hasAudio?: boolean }).hasAudio));
           }
         }
       } catch (err) {
