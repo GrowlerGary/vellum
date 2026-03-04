@@ -340,14 +340,18 @@ export function MediaDetailDialog({
                 {renderMetadata(item)}
                 {item.genres.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {item.genres.slice(0, 5).map((g) => (
-                      <span
-                        key={g}
-                        className="text-xs bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded"
-                      >
-                        {g}
-                      </span>
-                    ))}
+                    {item.genres.slice(0, 5).map((g) => {
+                      const label = typeof g === "string" ? g : (g as { tag?: string }).tag ?? "";
+                      if (!label) return null;
+                      return (
+                        <span
+                          key={label}
+                          className="text-xs bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded"
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
               </div>

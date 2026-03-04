@@ -27,6 +27,8 @@ export interface HardcoverResult {
   hasAudio: boolean;
 }
 
+type HardcoverTag = string | { tag?: string; tagSlug?: string; category?: string; categorySlug?: string; spoilerRatio?: number; count?: number };
+
 interface HardcoverBook {
   id: number;
   title?: string;
@@ -37,7 +39,7 @@ interface HardcoverBook {
   book_series?: Array<{ series?: { name?: string }; position?: number }>;
   contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
   audio_books?: Array<{ id: number }>;
-  cached_tags?: { Genre?: string[] };
+  cached_tags?: { Genre?: HardcoverTag[] };
   rating?: number;
   ratings_count?: number;
   pages?: number;
@@ -86,7 +88,9 @@ function mapBook(
     posterUrl: book.image?.url ?? null,
     backdropUrl: null,
     overview: book.description ?? "",
-    genres: book.cached_tags?.Genre ?? [],
+    genres: (book.cached_tags?.Genre ?? []).map((g) =>
+      typeof g === "string" ? g : (g.tag ?? "")
+    ).filter(Boolean),
     externalId: String(book.id),
     source: "HARDCOVER",
     metadata: {
