@@ -40,6 +40,7 @@ interface HardcoverBook {
   contributions?: Array<{ author?: { name?: string }; contribution?: string }>;
   editions?: Array<{ reading_format_id?: number; contributions?: Array<{ author?: { name?: string }; contribution?: string }> }>;
   audio_books?: Array<{ id: number }>;
+  audio_seconds?: number;
   cached_tags?: { Genre?: HardcoverTag[] };
   rating?: number;
   ratings_count?: number;
@@ -66,7 +67,7 @@ function mapBook(
   book: HardcoverBook,
   preferAudio = false
 ): HardcoverResult {
-  const hasAudio = (book.audio_books?.length ?? 0) > 0;
+  const hasAudio = (book.audio_books?.length ?? 0) > 0 || (book.audio_seconds ?? 0) > 0;
   const effectiveType = preferAudio ? "AUDIOBOOK" : "BOOK";
   const contributions = book.contributions ?? [];
   const authors = contributions
