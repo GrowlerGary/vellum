@@ -37,6 +37,19 @@ interface TmdbSearchItem {
   genre_ids?: number[];
 }
 
+// Similar endpoint returns items without media_type — type is known from the caller
+interface TmdbSimilarItem {
+  id: number;
+  title?: string;
+  name?: string;
+  release_date?: string;
+  first_air_date?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  overview?: string;
+  genre_ids?: number[];
+}
+
 interface TmdbDetail {
   id: number;
   title?: string;
@@ -76,6 +89,42 @@ function mapItem(item: TmdbSearchItem): TmdbResult | null {
     source: "TMDB",
     metadata: { tmdbId: item.id, mediaType: item.media_type },
   };
+}
+
+function mapSimilarItem(item: TmdbSimilarItem, mediaType: "MOVIE" | "TV_SHOW"): TmdbResult {
+  const isMovie = mediaType === "MOVIE";
+  const rawYear = isMovie ? item.release_date : item.first_air_date;
+  return {
+    id: item.id,
+    mediaType,
+    title: isMovie ? (item.title ?? "") : (item.name ?? ""),
+    year: rawYear ? new Date(rawYear).getFullYear() : null,
+    posterUrl: item.poster_path ? `${TMDB_IMAGE}/w500${item.poster_path}` : null,
+    backdropUrl: item.backdrop_path ? `${TMDB_IMAGE}/w1280${item.backdrop_path}` : null,
+    overview: item.overview ?? "",
+    genres: [],
+    externalId: String(item.id),
+    source: "TMDB",
+    metadata: { tmdbId: item.id, mediaType: isMovie ? "movie" : "tv" },
+  };
+}
+
+export async function getSimilarTmdb(
+  externalId: string,
+  mediaType: "movie" | "tv"
+): Promise<TmdbResult[]> {
+  try {
+    const res = await fetch(
+      `${TMDB_BASE}/${mediaType}/${externalId}/similar?language=en-US&page=1`,
+      { headers: getHeaders() }
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { results: TmdbSimilarItem[] };
+    const appType: "MOVIE" | "TV_SHOW" = mediaType === "movie" ? "MOVIE" : "TV_SHOW";
+    return (data.results ?? []).slice(0, 8).map((item) => mapSimilarItem(item, appType));
+  } catch {
+    return [];
+  }
 }
 
 export async function searchTmdb(query: string): Promise<TmdbResult[]> {

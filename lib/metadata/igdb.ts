@@ -47,6 +47,7 @@ interface IgdbGame {
   screenshots?: Array<{ image_id?: string }>;
   genres?: Array<{ name?: string }>;
   rating?: number;
+  similar_games?: number[];
   involved_companies?: Array<{
     company?: { name?: string };
     developer?: boolean;
@@ -110,4 +111,22 @@ export async function getIgdbDetail(id: string): Promise<IgdbResult | null> {
   const body = `where id = ${id}; fields name,summary,first_release_date,cover.image_id,screenshots.image_id,genres.name,rating,involved_companies.company.name,involved_companies.developer; limit 1;`;
   const games = await igdbPost("games", body);
   return games[0] ? mapGame(games[0]) : null;
+}
+
+export async function getSimilarIgdb(externalId: string): Promise<IgdbResult[]> {
+  try {
+    // Step 1: get the source game's similar_games IDs
+    const sourceBody = `where id = ${externalId}; fields similar_games; limit 1;`;
+    const sourceGames = await igdbPost("games", sourceBody);
+    const similarIds = sourceGames[0]?.similar_games;
+    if (!similarIds?.length) return [];
+
+    // Step 2: fetch details for up to 8 similar games
+    const ids = similarIds.slice(0, 8).join(",");
+    const detailBody = `where id = (${ids}); fields name,summary,first_release_date,cover.image_id,screenshots.image_id,genres.name,rating; limit 8;`;
+    const similarGames = await igdbPost("games", detailBody);
+    return similarGames.map(mapGame);
+  } catch {
+    return [];
+  }
 }
