@@ -93,12 +93,12 @@ services:
     environment:
       DATABASE_URL: postgresql://vellum:vellum@db:5432/vellum
       # ---------------------------------------------------------------------------
-      # Set your ABS instance URL and credentials to enable live scrobbling.
+      # Set ABS_URL and ABS_API_KEY to enable live scrobbling.
+      # Find your API key in ABS → Settings → Users → (your user) → API Key
       # Leave ABS_URL empty to disable (the service will exit cleanly on start).
       # ---------------------------------------------------------------------------
       ABS_URL: ""
-      ABS_USERNAME: ""
-      ABS_PASSWORD: ""
+      ABS_API_KEY: ""
 
 volumes:
   postgres_data:

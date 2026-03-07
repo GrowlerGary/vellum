@@ -9,21 +9,10 @@ export class ABSClient {
   private token: string | null = null
 
   async connect(): Promise<void> {
-    // Step 1: HTTP login to get token
-    const loginRes = await fetch(`${config.absUrl}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: config.absUsername,
-        password: config.absPassword,
-      }),
-    })
+    // Use the API key directly as the bearer token — no login round-trip needed
+    this.token = config.absApiKey
 
-    if (!loginRes.ok) throw new Error(`ABS login failed: ${loginRes.status}`)
-    const loginData = await loginRes.json() as { user: { token: string } }
-    this.token = loginData.user.token
-
-    // Step 2: Socket.IO connection with bearer token in auth
+    // Socket.IO connection with API key as bearer token in auth
     this.socket = io(config.absUrl, {
       transports: ['websocket'],
       reconnection: true,
