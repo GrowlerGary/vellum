@@ -10,7 +10,12 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
-  const mediaType = searchParams.get("type") ?? "MOVIE";
+  const rawType = searchParams.get("type") ?? "MOVIE";
+  const VALID_TYPES = ["MOVIE", "TV_SHOW", "BOOK", "AUDIOBOOK", "VIDEO_GAME"] as const;
+  if (!VALID_TYPES.includes(rawType as (typeof VALID_TYPES)[number])) {
+    return NextResponse.json({ error: "Invalid type" }, { status: 400 });
+  }
+  const mediaType = rawType;
   const refresh = searchParams.get("refresh") === "true";
 
   // Check cache

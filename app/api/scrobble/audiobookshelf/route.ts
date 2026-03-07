@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { z } from "zod";
 
 /**
  * Audiobookshelf webhook receiver.
@@ -24,32 +25,30 @@ function verifySignature(body: string, signature: string, secret: string): boole
   }
 }
 
-interface AbsMediaItem {
-  metadata?: {
-    title?: string;
-    authorName?: string;
-    publishedYear?: string;
-  };
-  media?: {
-    metadata?: {
-      title?: string;
-      authorName?: string;
-      publishedYear?: string;
-    };
-  };
-}
+const absMetadataSchema = z.object({
+  title: z.string().optional(),
+  authorName: z.string().optional(),
+  publishedYear: z.string().optional(),
+}).passthrough()
 
-interface AbsPayload {
-  event?: string;
-  mediaProgress?: {
-    isFinished?: boolean;
-    progress?: number;
-    currentTime?: number;
-    duration?: number;
-  };
-  libraryItem?: AbsMediaItem;
-  mediaItem?: AbsMediaItem;
-}
+const absMediaItemSchema = z.object({
+  metadata: absMetadataSchema.optional(),
+  media: z.object({ metadata: absMetadataSchema.optional() }).passthrough().optional(),
+}).passthrough()
+
+const absPayloadSchema = z.object({
+  event: z.string().optional(),
+  mediaProgress: z.object({
+    isFinished: z.boolean().optional(),
+    progress: z.number().min(0).max(1).optional(),
+    currentTime: z.number().optional(),
+    duration: z.number().optional(),
+  }).passthrough().optional(),
+  libraryItem: absMediaItemSchema.optional(),
+  mediaItem: absMediaItemSchema.optional(),
+}).passthrough()
+
+type AbsPayload = z.infer<typeof absPayloadSchema>
 
 export async function POST(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -73,12 +72,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let payload: AbsPayload;
+  let raw: unknown;
   try {
-    payload = JSON.parse(rawBody) as AbsPayload;
+    raw = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  const parsed = absPayloadSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+  const payload: AbsPayload = parsed.data;
 
   const event = payload.event;
   if (event !== "media_progress_updated") {

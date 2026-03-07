@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { z } from "zod";
 
 /**
  * Trakt scrobble webhook receiver.
@@ -17,29 +18,37 @@ function verifySignature(body: string, signature: string, secret: string): boole
     .createHmac("sha256", secret)
     .update(body)
     .digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  } catch {
+    // timingSafeEqual throws if buffer lengths differ
+    return false;
+  }
 }
 
-interface TraktPayload {
-  action?: string;
-  movie?: {
-    ids?: { tmdb?: number };
-    title?: string;
-    year?: number;
-  };
-  episode?: {
-    ids?: { tmdb?: number };
-    title?: string;
-    season?: number;
-    number?: number;
-  };
-  show?: {
-    ids?: { tmdb?: number };
-    title?: string;
-    year?: number;
-  };
-  progress?: number;
-}
+const traktIdsSchema = z.object({ tmdb: z.number().optional() }).passthrough()
+const traktPayloadSchema = z.object({
+  action: z.string().optional(),
+  progress: z.number().min(0).max(100).optional(),
+  movie: z.object({
+    ids: traktIdsSchema.optional(),
+    title: z.string().optional(),
+    year: z.number().optional(),
+  }).passthrough().optional(),
+  episode: z.object({
+    ids: traktIdsSchema.optional(),
+    title: z.string().optional(),
+    season: z.number().optional(),
+    number: z.number().optional(),
+  }).passthrough().optional(),
+  show: z.object({
+    ids: traktIdsSchema.optional(),
+    title: z.string().optional(),
+    year: z.number().optional(),
+  }).passthrough().optional(),
+}).passthrough()
+
+type TraktPayload = z.infer<typeof traktPayloadSchema>
 
 export async function POST(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -64,12 +73,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let payload: TraktPayload;
+  let raw: unknown;
   try {
-    payload = JSON.parse(rawBody) as TraktPayload;
+    raw = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  const parsed = traktPayloadSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+  const payload: TraktPayload = parsed.data;
 
   const action = payload.action;
   // Only process "scrobble" events (completed watches)
