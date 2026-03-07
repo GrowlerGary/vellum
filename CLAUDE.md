@@ -164,3 +164,20 @@ ThoughtFactory project board: https://github.com/orgs/TwoBitLab/projects/1/views
 
 - **ABStoMT** (https://github.com/marcousa/ABStoMT) — User's existing Python Socket.IO ABS→MediaTracker bridge. Reference implementation for the sidecar service (translated to Node.js/TypeScript in this plan).
 - **ThoughtFactory/broker** (`/Users/marco/Projects/ThoughtFactory/broker`) — Uses better-sqlite3, separate project.
+
+## Security Audit Notes (2026-03-07)
+
+### npm audit findings
+- 7 vulnerabilities (1 moderate, 6 high) all in `@ducanh2912/next-pwa` build toolchain
+  - Root cause: `serialize-javascript` via `workbox-build` → `terser-webpack-plugin`
+  - **Build-time only** — no runtime exposure
+  - CVE: RCE via `RegExp.flags` and `Date.prototype.toISOString()` (affects build pipeline, not deployed app)
+  - Fix requires `npm audit fix --force` which may break PWA service worker generation
+  - **Action**: Track for upstream fix in `@ducanh2912/next-pwa` > 10.2.9
+
+### NEXT_PUBLIC_ audit
+- No sensitive API keys or secrets use the NEXT_PUBLIC_ prefix ✅
+
+### .gitignore
+- `.env`, `.env.local`, `.env.*.local` all excluded ✅
+- `.env.example` committed with placeholder values only ✅
