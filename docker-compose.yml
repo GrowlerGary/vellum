@@ -94,9 +94,9 @@ services:
       DATABASE_URL: postgresql://vellum:vellum@db:5432/vellum
       # ---------------------------------------------------------------------------
       # Set ABS_URL and ABS_TOKEN to enable live scrobbling.
-      # Use your personal user token: ABS → Settings → Users → (your user) → token
-      # Do NOT use a key from Settings → API Keys — those are HTTP-only and are
-      # rejected by the socket auth handler which only validates user tokens.
+      # ABS_TOKEN accepts either an API key (Settings → API Keys) or a personal
+      # user token. The sidecar calls /api/me to exchange an API key for the JWT
+      # token required by socket auth, so either credential type works.
       # Leave ABS_URL empty to disable (the service will exit cleanly on start).
       # ---------------------------------------------------------------------------
       ABS_URL: ""

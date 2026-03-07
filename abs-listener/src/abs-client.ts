@@ -9,10 +9,29 @@ export class ABSClient {
   private token: string | null = null
 
   async connect(): Promise<void> {
-    // Use the user token directly — works for both HTTP and socket auth
+    // API keys (Settings → API Keys) work for HTTP but are rejected by ABS socket
+    // auth, which only validates user JWT tokens. Call /api/me with the configured
+    // credential to resolve the user's JWT token for socket auth.
+    // When ABS adds native API key support for sockets, the fallback handles it.
     this.token = config.absToken
+    try {
+      const meRes = await fetch(`${config.absUrl}/api/me`, {
+        headers: { Authorization: `Bearer ${config.absToken}` },
+      })
+      if (meRes.ok) {
+        const me = await meRes.json() as { user?: { token?: string } }
+        if (me.user?.token) {
+          this.token = me.user.token
+          console.log('[ABS] Resolved JWT token from /api/me for socket auth')
+        }
+      } else {
+        console.warn(`[ABS] /api/me returned ${meRes.status}, falling back to configured token`)
+      }
+    } catch (err) {
+      console.warn('[ABS] Could not reach /api/me, falling back to configured token:', err)
+    }
 
-    // Socket.IO connection with user token in auth
+    // Socket.IO connection with resolved JWT token in auth
     this.socket = io(config.absUrl, {
       transports: ['websocket'],
       reconnection: true,
