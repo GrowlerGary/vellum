@@ -4,6 +4,11 @@ import { MEDIA_TYPE_ICONS, MEDIA_TYPE_LABELS, formatYear } from "@/lib/utils";
 import { StatusBadge } from "./StatusBadge";
 import { RatingDisplay } from "./RatingWidget";
 
+interface ListeningProgressData {
+  progress: number      // 0–1
+  currentChapter?: string | null
+}
+
 interface MediaCardProps {
   id: string;
   title: string;
@@ -15,6 +20,7 @@ interface MediaCardProps {
   href?: string;
   onClick?: () => void;
   compact?: boolean;
+  listeningProgress?: ListeningProgressData | null;
 }
 
 export function MediaCard({
@@ -29,6 +35,7 @@ export function MediaCard({
   href,
   onClick,
   compact = false,
+  listeningProgress,
 }: MediaCardProps) {
   const icon = MEDIA_TYPE_ICONS[mediaType] ?? "📦";
   const typeLabel = MEDIA_TYPE_LABELS[mediaType] ?? mediaType;
@@ -68,6 +75,22 @@ export function MediaCard({
         <h3 className="text-sm font-semibold leading-tight text-zinc-900 line-clamp-2">{title}</h3>
         {rating != null && (
           <RatingDisplay value={rating} size="sm" />
+        )}
+        {listeningProgress != null && (
+          <div className="mt-1">
+            {/* Progress bar */}
+            <div className="h-1 w-full rounded-full bg-zinc-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-indigo-500 transition-all"
+                style={{ width: `${Math.min(100, Math.round(listeningProgress.progress * 100))}%` }}
+              />
+            </div>
+            {listeningProgress.currentChapter && (
+              <p className="mt-0.5 text-[10px] text-zinc-400 truncate" title={listeningProgress.currentChapter}>
+                {listeningProgress.currentChapter}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

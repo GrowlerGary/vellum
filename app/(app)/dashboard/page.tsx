@@ -11,7 +11,7 @@ const DEFAULT_CATEGORY_ORDER = ["MOVIE", "TV_SHOW", "BOOK", "AUDIOBOOK", "VIDEO_
 async function fetchEntries(userId: string) {
   return db.mediaEntry.findMany({
     where: { userId },
-    include: { mediaItem: true },
+    include: { mediaItem: true, listeningProgress: true },
     orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
   });
 }
@@ -66,6 +66,10 @@ export default async function DashboardPage() {
         year: number | null;
         posterUrl: string | null;
       };
+      listeningProgress: {
+        progress: number;
+        currentChapter: string | null;
+      } | null;
     }[];
 
   return (

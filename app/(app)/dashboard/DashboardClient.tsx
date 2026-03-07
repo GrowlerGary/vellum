@@ -36,12 +36,18 @@ interface MediaItemData {
   posterUrl: string | null
 }
 
+interface ListeningProgressData {
+  progress: number
+  currentChapter: string | null
+}
+
 interface EntryData {
   id: string
   status: string
   rating: number | null
   mediaItem: MediaItemData
   sortOrder: number
+  listeningProgress: ListeningProgressData | null
 }
 
 interface StatData {
@@ -128,6 +134,7 @@ function SortableWantCategory({ type, initialEntries }: SortableCategoryProps) {
         status={entry.status}
         rating={entry.rating}
         href={`/item/${entry.id}`}
+        listeningProgress={entry.listeningProgress}
       />
       <div className="flex justify-center">
         <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
@@ -176,6 +183,7 @@ function SortableWantCategory({ type, initialEntries }: SortableCategoryProps) {
                         status={entry.status}
                         rating={entry.rating}
                         href={`/item/${entry.id}`}
+                        listeningProgress={entry.listeningProgress}
                       />
                       <div className="flex justify-center">
                         <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
@@ -254,6 +262,7 @@ function DashboardSection({
                 status={entry.status}
                 rating={entry.rating}
                 href={`/item/${entry.id}`}
+                listeningProgress={entry.listeningProgress}
               />
               {showNextUp && (
                 <div className="flex justify-center">
