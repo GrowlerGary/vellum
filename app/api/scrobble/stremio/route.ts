@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { z } from "zod";
 
 /**
  * Stremio scrobble endpoint.
@@ -32,15 +33,17 @@ function verifyToken(secret: string, provided: string): boolean {
   }
 }
 
-interface StremioPayload {
-  action?: string;
-  type?: string;
-  imdb_id?: string;
-  title?: string;
-  year?: number;
-  season?: number;
-  episode?: number;
-}
+const stremioPayloadSchema = z.object({
+  action: z.string().optional(),
+  type: z.string().optional(),
+  imdb_id: z.string().optional(),
+  title: z.string().optional(),
+  year: z.number().optional(),
+  season: z.number().optional(),
+  episode: z.number().optional(),
+}).passthrough()
+
+type StremioPayload = z.infer<typeof stremioPayloadSchema>
 
 export async function POST(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -61,12 +64,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  let payload: StremioPayload;
+  let raw: unknown;
   try {
-    payload = await req.json() as StremioPayload;
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  const parsedBody = stremioPayloadSchema.safeParse(raw);
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+  const payload: StremioPayload = parsedBody.data;
 
   if (payload.action !== "watched") {
     return NextResponse.json({ status: "ignored", action: payload.action });

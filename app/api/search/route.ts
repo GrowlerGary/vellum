@@ -3,10 +3,16 @@ import { auth } from "@/lib/auth";
 import { searchTmdb } from "@/lib/metadata/tmdb";
 import { searchIgdb } from "@/lib/metadata/igdb";
 import { searchHardcover } from "@/lib/metadata/hardcover";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // 30 searches per minute per user
+  if (!rateLimit(`search:${session.user.id}`, 30, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   const { searchParams } = req.nextUrl;
   const query = searchParams.get("q")?.trim();

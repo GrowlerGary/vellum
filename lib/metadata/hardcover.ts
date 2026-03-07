@@ -112,6 +112,34 @@ export async function searchHardcover(
   }
 }
 
+export async function getSimilarHardcover(externalId: string): Promise<HardcoverResult[]> {
+  // Hardcover has no native "similar books" endpoint.
+  // Strategy: fetch the book's primary author, then search for books by that author.
+  const q = `
+    query BookAuthor($id: Int!) {
+      books(where: { id: { _eq: $id } }, limit: 1) {
+        id
+        contributions { author { name } }
+        cached_tags
+      }
+    }
+  `;
+  try {
+    const data = await gql<HardcoverDetailResponse>(q, { id: parseInt(externalId, 10) });
+    const book = data.data?.books?.[0];
+    if (!book) return [];
+
+    const firstAuthor = book.contributions?.[0]?.author?.name;
+    if (!firstAuthor) return [];
+
+    // Search by author name and exclude the original book
+    const results = await searchHardcover(firstAuthor);
+    return results.filter((r) => r.externalId !== externalId).slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
 export async function getHardcoverDetail(
   id: string,
   preferAudio = false
