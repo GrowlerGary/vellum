@@ -87,10 +87,11 @@ function groupByType(entries: EntryData[]): Record<string, EntryData[]> {
 interface SortableCategoryProps {
   type: string
   initialEntries: EntryData[]
+  isExpanded: boolean
+  onToggle: () => void
 }
 
-function SortableWantCategory({ type, initialEntries }: SortableCategoryProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+function SortableWantCategory({ type, initialEntries, isExpanded, onToggle }: SortableCategoryProps) {
   const [entries, setEntries] = useState<EntryData[]>(initialEntries)
 
   const sensors = useSensors(
@@ -146,7 +147,7 @@ function SortableWantCategory({ type, initialEntries }: SortableCategoryProps) {
     <div className="rounded-xl border border-zinc-100 bg-white p-3 shadow-sm">
       {/* Header */}
       <button
-        onClick={() => setIsExpanded((v) => !v)}
+        onClick={onToggle}
         className="flex items-center gap-2 w-full text-left py-1 hover:bg-zinc-50 rounded-lg px-2 transition-colors"
         aria-expanded={isExpanded}
       >
@@ -240,11 +241,17 @@ function DashboardSection({
         {activeTypes.map((type) => {
           const typeEntries = groups[type]
 
-          // Want queue — each type manages its own expand + DnD state
+          // Want queue — sortable with DnD, but expand state lifted here for col-span
           if (sortable) {
+            const isExpanded = expandedTypes[type] ?? false
             return (
-              <div key={`${sectionKey}-${type}`}>
-                <SortableWantCategory type={type} initialEntries={typeEntries} />
+              <div key={`${sectionKey}-${type}`} className={isExpanded ? 'md:col-span-2' : ''}>
+                <SortableWantCategory
+                  type={type}
+                  initialEntries={typeEntries}
+                  isExpanded={isExpanded}
+                  onToggle={() => toggleType(type)}
+                />
               </div>
             )
           }
