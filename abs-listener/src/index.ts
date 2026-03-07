@@ -1,9 +1,13 @@
-import { validateConfig, config } from './config'
+import { validateConfig, config, isEnabled } from './config'
 import { ABSClient } from './abs-client'
 import { syncProgress } from './sync'
 import { PrismaClient } from '@prisma/client'
 
 async function main() {
+  if (!isEnabled()) {
+    console.log('[ABS-Listener] ABS_URL not set — integration disabled. Exiting.')
+    process.exit(0)
+  }
   validateConfig()
 
   const prisma = new PrismaClient({
