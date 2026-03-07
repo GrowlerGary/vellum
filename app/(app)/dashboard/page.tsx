@@ -61,6 +61,7 @@ function TypeGroup({ type, entries, showNextUp }: TypeGroupProps) {
               mediaType={entry.mediaItem.type}
               status={entry.status}
               rating={entry.rating}
+              href={`/item/${entry.id}`}
             />
             {showNextUp && (
               <div className="flex justify-center">
@@ -113,6 +114,7 @@ function DashboardSection({ title, entries, showNextUp }: DashboardSectionProps)
                     mediaType={entry.mediaItem.type}
                     status={entry.status}
                     rating={entry.rating}
+                    href={`/item/${entry.id}`}
                   />
                   {showNextUp && (
                     <div className="flex justify-center">
