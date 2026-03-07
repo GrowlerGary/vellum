@@ -3,10 +3,16 @@ import { auth } from '@/lib/auth'
 import { getTmdbDetail } from '@/lib/metadata/tmdb'
 import { getIgdbDetail } from '@/lib/metadata/igdb'
 import { getHardcoverDetail } from '@/lib/metadata/hardcover'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // 60 detail fetches per minute per user (used during Fix Match)
+  if (!rateLimit(`metadata:${session.user.id}`, 60, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
 
   const { searchParams } = request.nextUrl
   const source = searchParams.get('source')
