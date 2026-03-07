@@ -10,6 +10,7 @@ import { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS, STATUS_LABELS } from '@/lib/utils'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
 
 type EntryWithRelations = MediaEntry & {
   mediaItem: MediaItem
@@ -175,11 +176,8 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
         />
       </section>
 
-      {/* Similar Items placeholder — filled in Task 12 */}
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900 mb-2">Similar Items</h2>
-        <p className="text-zinc-400 text-sm">Recommendations coming soon</p>
-      </section>
+      {/* Similar Items */}
+      <SimilarItemsSection mediaItemId={item.id} mediaSource={item.source} />
 
       {/* Fix Match placeholder — filled in Task 15 */}
       <section>
