@@ -95,6 +95,7 @@ model MediaEntry {
   rating      Float?
   reviewText  String?
   isPublic    Boolean     @default(true)
+  sortOrder   Int         @default(0)
   startedAt   DateTime?
   completedAt DateTime?
   createdAt   DateTime    @default(now())
