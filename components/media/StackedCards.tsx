@@ -13,7 +13,11 @@ export function StackedCards({ children, maxVisible = 2 }: StackedCardsProps) {
 
   return (
     <div className="flex gap-3 items-start flex-wrap">
-      {visible}
+      {visible.map((child, i) => (
+        <div key={i} className="w-[150px] shrink-0">
+          {child}
+        </div>
+      ))}
       {remaining > 0 && (
         <div className="relative w-[100px] h-[150px] flex items-center justify-center flex-shrink-0">
           {/* Stacked card visual layers */}
