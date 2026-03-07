@@ -9,10 +9,10 @@ export class ABSClient {
   private token: string | null = null
 
   async connect(): Promise<void> {
-    // Use the API key directly as the bearer token — no login round-trip needed
-    this.token = config.absApiKey
+    // Use the user token directly — works for both HTTP and socket auth
+    this.token = config.absToken
 
-    // Socket.IO connection with API key as bearer token in auth
+    // Socket.IO connection with user token in auth
     this.socket = io(config.absUrl, {
       transports: ['websocket'],
       reconnection: true,
