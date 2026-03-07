@@ -1,13 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  rectSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { ChevronDown, ChevronUp, Plus, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MediaCard } from '@/components/media/MediaCard'
 import { CollapsibleCategory } from '@/components/media/CollapsibleCategory'
+import { StackedCards } from '@/components/media/StackedCards'
+import { SortableMediaCard } from '@/components/media/SortableMediaCard'
 import { SetNextUpButton } from '@/components/media/SetNextUpButton'
-import { Plus, Sparkles } from 'lucide-react'
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS } from '@/lib/utils'
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 interface MediaItemData {
   id: string
@@ -45,13 +63,7 @@ interface DashboardClientProps {
   isEmpty: boolean
 }
 
-interface SectionProps {
-  sectionKey: string
-  title: string
-  entries: EntryData[]
-  categoryOrder: string[]
-  showNextUp?: boolean
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function groupByType(entries: EntryData[]): Record<string, EntryData[]> {
   const groups: Record<string, EntryData[]> = {}
@@ -63,15 +75,149 @@ function groupByType(entries: EntryData[]): Record<string, EntryData[]> {
   return groups
 }
 
-function DashboardSection({ sectionKey, title, entries, categoryOrder, showNextUp }: SectionProps) {
-  // Track expanded state per media type within this section
+// ── Sortable Want category (drag-and-drop when expanded) ─────────────────────
+
+interface SortableCategoryProps {
+  type: string
+  initialEntries: EntryData[]
+}
+
+function SortableWantCategory({ type, initialEntries }: SortableCategoryProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [entries, setEntries] = useState<EntryData[]>(initialEntries)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  )
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+
+      const oldIndex = entries.findIndex((e) => e.id === String(active.id))
+      const newIndex = entries.findIndex((e) => e.id === String(over.id))
+      const reordered = arrayMove(entries, oldIndex, newIndex)
+      setEntries(reordered)
+
+      await fetch('/api/entries/reorder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entries: reordered.map((e, idx) => ({ id: e.id, sortOrder: idx })),
+        }),
+      })
+    },
+    [entries]
+  )
+
+  const icon = MEDIA_TYPE_ICONS[type] ?? '📦'
+  const label = MEDIA_TYPE_LABELS[type] ?? type
+
+  // Build card nodes — each includes the MediaCard + SetNextUpButton
+  const cardNodes = entries.map((entry, idx) => (
+    <div key={entry.id} className="flex flex-col gap-1">
+      <MediaCard
+        id={entry.mediaItem.id}
+        title={entry.mediaItem.title}
+        year={entry.mediaItem.year}
+        posterUrl={entry.mediaItem.posterUrl}
+        mediaType={entry.mediaItem.type}
+        status={entry.status}
+        rating={entry.rating}
+        href={`/item/${entry.id}`}
+      />
+      <div className="flex justify-center">
+        <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
+      </div>
+    </div>
+  ))
+
+  return (
+    <div className="rounded-xl border border-zinc-100 bg-white p-3 shadow-sm">
+      {/* Header */}
+      <button
+        onClick={() => setIsExpanded((v) => !v)}
+        className="flex items-center gap-2 w-full text-left py-1 hover:bg-zinc-50 rounded-lg px-2 transition-colors"
+        aria-expanded={isExpanded}
+      >
+        <span className="text-lg">{icon}</span>
+        <span className="font-semibold text-zinc-800">{label}</span>
+        <span className="text-sm text-zinc-400 ml-1">({entries.length})</span>
+        {isExpanded && (
+          <span className="ml-2 text-xs text-zinc-400 italic">drag to reorder</span>
+        )}
+        <span className="ml-auto text-zinc-400">
+          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </span>
+      </button>
+
+      {/* Content */}
+      <div className="mt-2">
+        {isExpanded ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={entries.map((e) => e.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {entries.map((entry, idx) => (
+                  <SortableMediaCard key={entry.id} id={entry.id}>
+                    <div className="flex flex-col gap-1">
+                      <MediaCard
+                        id={entry.mediaItem.id}
+                        title={entry.mediaItem.title}
+                        year={entry.mediaItem.year}
+                        posterUrl={entry.mediaItem.posterUrl}
+                        mediaType={entry.mediaItem.type}
+                        status={entry.status}
+                        rating={entry.rating}
+                        href={`/item/${entry.id}`}
+                      />
+                      <div className="flex justify-center">
+                        <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
+                      </div>
+                    </div>
+                  </SortableMediaCard>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <StackedCards maxVisible={2}>{cardNodes}</StackedCards>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Dashboard section ────────────────────────────────────────────────────────
+
+interface SectionProps {
+  sectionKey: string
+  title: string
+  entries: EntryData[]
+  categoryOrder: string[]
+  showNextUp?: boolean
+  sortable?: boolean
+}
+
+function DashboardSection({
+  sectionKey,
+  title,
+  entries,
+  categoryOrder,
+  showNextUp,
+  sortable,
+}: SectionProps) {
   const [expandedTypes, setExpandedTypes] = useState<Record<string, boolean>>({})
 
   if (entries.length === 0) return null
 
   const groups = groupByType(entries)
   const activeTypes = categoryOrder.filter((t) => (groups[t]?.length ?? 0) > 0)
-
   if (activeTypes.length === 0) return null
 
   const toggleType = (type: string) => {
@@ -84,8 +230,18 @@ function DashboardSection({ sectionKey, title, entries, categoryOrder, showNextU
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {activeTypes.map((type) => {
           const typeEntries = groups[type]
-          const isExpanded = expandedTypes[type] ?? false
 
+          // Want queue — each type manages its own expand + DnD state
+          if (sortable) {
+            return (
+              <div key={`${sectionKey}-${type}`}>
+                <SortableWantCategory type={type} initialEntries={typeEntries} />
+              </div>
+            )
+          }
+
+          // Non-sortable: use CollapsibleCategory with stacked preview
+          const isExpanded = expandedTypes[type] ?? false
           const cards = typeEntries.map((entry, idx) => (
             <div key={entry.id} className="flex flex-col gap-1">
               <MediaCard
@@ -126,6 +282,8 @@ function DashboardSection({ sectionKey, title, entries, categoryOrder, showNextU
   )
 }
 
+// ── Root client component ─────────────────────────────────────────────────────
+
 export function DashboardClient({
   userName,
   inProgress,
@@ -140,9 +298,7 @@ export function DashboardClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">
-            Welcome back, {userName}
-          </h1>
+          <h1 className="text-2xl font-bold text-zinc-900">Welcome back, {userName}</h1>
           <p className="text-zinc-500">Here&apos;s what you&apos;ve been up to</p>
         </div>
         <div className="flex gap-2">
@@ -188,6 +344,7 @@ export function DashboardClient({
         entries={wantEntries}
         categoryOrder={categoryOrder}
         showNextUp
+        sortable
       />
 
       <DashboardSection
@@ -216,5 +373,4 @@ export function DashboardClient({
   )
 }
 
-// Keep the label/icon map accessible for stats rendering without importing entire utils in client
 export { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS }
