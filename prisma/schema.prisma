@@ -25,6 +25,7 @@ enum MetadataSource {
   TMDB
   IGDB
   HARDCOVER
+  AUDIOBOOKSHELF
   MANUAL
 }
 
@@ -51,6 +52,7 @@ model User {
   bio             String?
   role            Role      @default(USER)
   isProfilePublic Boolean   @default(true)
+  categoryOrder   String[]  @default(["MOVIE", "TV_SHOW", "BOOK", "AUDIOBOOK", "VIDEO_GAME"])
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -64,23 +66,25 @@ model User {
 }
 
 model MediaItem {
-  id          String         @id @default(cuid())
-  type        MediaType
-  externalId  String
-  source      MetadataSource
-  title       String
-  year        Int?
-  posterUrl   String?
-  backdropUrl String?
-  overview    String?
-  genres      String[]
-  metadata    Json           @default("{}")
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  type             MediaType
+  externalId       String
+  source           MetadataSource
+  title            String
+  year             Int?
+  posterUrl        String?
+  backdropUrl      String?
+  overview         String?
+  genres           String[]
+  metadata         Json           @default("{}")
+  absLibraryItemId String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   entries     MediaEntry[]
   listItems   ListItem[]
   suggestions AiSuggestion[]
+  similarCache SimilarItemCache?
 
   @@unique([source, externalId])
   @@index([type])
@@ -101,8 +105,9 @@ model MediaEntry {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mediaItem   MediaItem   @relation(fields: [mediaItemId], references: [id])
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItem         MediaItem          @relation(fields: [mediaItemId], references: [id])
+  listeningProgress ListeningProgress?
 
   @@unique([userId, mediaItemId])
   @@index([userId])
@@ -118,8 +123,8 @@ model MediaList {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items       ListItem[]
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ListItem[]
 
   @@index([userId])
 }
@@ -131,8 +136,8 @@ model ListItem {
   sortOrder   Int       @default(0)
   addedAt     DateTime  @default(now())
 
-  list        MediaList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
+  list      MediaList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id])
 
   @@unique([listId, mediaItemId])
 }
@@ -147,21 +152,42 @@ model ScrobbleConfig {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, source])
 }
 
 model AiSuggestion {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   mediaItemId String
   reason      String
   score       Float?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id])
 
   @@index([userId, createdAt])
+}
+
+model ListeningProgress {
+  id             String   @id @default(cuid())
+  mediaEntryId   String   @unique
+  progress       Float
+  currentTime    Float
+  duration       Float
+  currentChapter String?
+  lastSyncedAt   DateTime @default(now())
+
+  mediaEntry MediaEntry @relation(fields: [mediaEntryId], references: [id], onDelete: Cascade)
+}
+
+model SimilarItemCache {
+  id          String   @id @default(cuid())
+  mediaItemId String   @unique
+  results     Json
+  fetchedAt   DateTime @default(now())
+
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
 }
