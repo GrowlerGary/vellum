@@ -23,6 +23,7 @@ import { CollapsibleCategory } from '@/components/media/CollapsibleCategory'
 import { StackedCards } from '@/components/media/StackedCards'
 import { SortableMediaCard } from '@/components/media/SortableMediaCard'
 import { SetNextUpButton } from '@/components/media/SetNextUpButton'
+import { DiscoverSection } from '@/components/media/DiscoverSection'
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS } from '@/lib/utils'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -353,6 +354,8 @@ export function DashboardClient({
         entries={recentCompleted}
         categoryOrder={categoryOrder}
       />
+
+      <DiscoverSection />
 
       {isEmpty && (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
