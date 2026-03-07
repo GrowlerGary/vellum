@@ -19,9 +19,9 @@ export class ABSClient {
         headers: { Authorization: `Bearer ${config.absToken}` },
       })
       if (meRes.ok) {
-        const me = await meRes.json() as { user?: { token?: string } }
-        if (me.user?.token) {
-          this.token = me.user.token
+        const me = await meRes.json() as { token?: string }
+        if (me.token) {
+          this.token = me.token
           console.log('[ABS] Resolved JWT token from /api/me for socket auth')
         }
       } else {
