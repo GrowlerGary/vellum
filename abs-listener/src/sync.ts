@@ -1,30 +1,27 @@
 import { PrismaClient } from '@prisma/client'
 import type { ABSClient } from './abs-client'
 
-// Shape of the ABS `user_item_progress_updated` Socket.IO event
+// Shape of the ABS `user_item_progress_updated` Socket.IO event.
+// ABS emits the MediaProgress object flat — no nested wrapper.
 interface ABSProgressEvent {
   id: string           // ABS progress record ID
   libraryItemId: string
-  episodeId?: string   // set for podcast episodes; ignored for audiobooks
+  episodeId?: string | null  // set for podcast episodes; null/absent for audiobooks
   userId: string       // ABS user ID (not Vellum)
-  mediaProgress: {
+  duration: number     // seconds
+  progress: number     // 0–1
+  currentTime: number
+  isFinished: boolean
+  hideFromContinueListening?: boolean
+  currentChapter?: {
     id: string
-    libraryItemId: string
-    episodeId?: string
-    duration: number   // seconds
-    progress: number   // 0–1
-    currentTime: number
-    isFinished: boolean
-    currentChapter?: {
-      id: string
-      start: number
-      end: number
-      title: string
-    }
-    startedAt: number  // unix ms
-    lastUpdate: number // unix ms
-    finishedAt?: number
-  }
+    start: number
+    end: number
+    title: string
+  } | null
+  startedAt: number    // unix ms
+  lastUpdate: number   // unix ms
+  finishedAt?: number | null
 }
 
 function progressToStatus(progress: number, isFinished: boolean): 'WANT' | 'IN_PROGRESS' | 'COMPLETED' {
@@ -100,10 +97,10 @@ export async function syncProgress(
   rawEvent: any
 ): Promise<void> {
   const event = rawEvent as ABSProgressEvent
-  const { libraryItemId, mediaProgress } = event
+  const { libraryItemId, episodeId, progress, currentTime, duration, isFinished, currentChapter } = event
 
   // Skip podcast episodes
-  if (mediaProgress.episodeId) return
+  if (episodeId) return
 
   const mediaItem = await findMediaItem(prisma, abs, libraryItemId)
   if (!mediaItem) {
@@ -123,7 +120,7 @@ export async function syncProgress(
     return
   }
 
-  const newStatus = progressToStatus(mediaProgress.progress, mediaProgress.isFinished)
+  const newStatus = progressToStatus(progress, isFinished)
 
   // Update entry status if it changed (don't downgrade COMPLETED → IN_PROGRESS)
   const statusRank = { WANT: 0, IN_PROGRESS: 1, COMPLETED: 2, DROPPED: 3 }
@@ -147,23 +144,23 @@ export async function syncProgress(
       where: { mediaEntryId: entry.id },
       create: {
         mediaEntryId: entry.id,
-        progress: mediaProgress.progress,
-        currentTime: mediaProgress.currentTime,
-        duration: mediaProgress.duration,
-        currentChapter: mediaProgress.currentChapter?.title ?? null,
+        progress,
+        currentTime,
+        duration,
+        currentChapter: currentChapter?.title ?? null,
         lastSyncedAt: new Date(),
       },
       update: {
-        progress: mediaProgress.progress,
-        currentTime: mediaProgress.currentTime,
-        duration: mediaProgress.duration,
-        currentChapter: mediaProgress.currentChapter?.title ?? null,
+        progress,
+        currentTime,
+        duration,
+        currentChapter: currentChapter?.title ?? null,
         lastSyncedAt: new Date(),
       },
     })
   })
 
   console.log(
-    `[sync] Updated progress for "${mediaItem.title}": ${Math.round(mediaProgress.progress * 100)}% (${newStatus})`
+    `[sync] Updated progress for "${mediaItem.title}": ${Math.round(progress * 100)}% (${newStatus})`
   )
 }
