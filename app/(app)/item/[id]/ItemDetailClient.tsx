@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { MediaEntry, MediaItem, ListeningProgress } from '@prisma/client'
 import { RatingWidget } from '@/components/media/RatingWidget'
 import { StatusBadge } from '@/components/media/StatusBadge'
@@ -11,6 +12,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
+import { FixMatchSection } from '@/components/media/FixMatchSection'
 
 type EntryWithRelations = MediaEntry & {
   mediaItem: MediaItem
@@ -18,6 +20,7 @@ type EntryWithRelations = MediaEntry & {
 }
 
 export default function ItemDetailClient({ entry }: { entry: EntryWithRelations }) {
+  const router = useRouter()
   const [status, setStatus] = useState(entry.status)
   const [rating, setRating] = useState<number | null>(entry.rating)
   const [reviewText, setReviewText] = useState(entry.reviewText || '')
@@ -179,11 +182,22 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
       {/* Similar Items */}
       <SimilarItemsSection mediaItemId={item.id} mediaSource={item.source} />
 
-      {/* Fix Match placeholder — filled in Task 15 */}
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900 mb-2">Fix Match</h2>
-        <p className="text-zinc-400 text-sm">Metadata correction coming soon</p>
-      </section>
+      {/* Fix Match */}
+      <FixMatchSection
+        mediaItem={{
+          id: item.id,
+          type: item.type,
+          source: item.source,
+          title: item.title,
+          year: item.year,
+          posterUrl: item.posterUrl,
+          backdropUrl: item.backdropUrl,
+          overview: item.overview ?? '',
+          genres: item.genres,
+          metadata: item.metadata as Record<string, unknown>,
+        }}
+        onMatchApplied={() => router.refresh()}
+      />
     </div>
   )
 }
