@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MediaItem } from '@prisma/client'
 import { RatingWidget } from '@/components/media/RatingWidget'
@@ -141,19 +141,12 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
         </section>
       )}
 
-      {/* Similar Items — parentMediaType prop added to interface in Task 5 */}
-      {(() => {
-        const SimilarSection = SimilarItemsSection as React.ComponentType<
-          React.ComponentProps<typeof SimilarItemsSection> & { parentMediaType: string }
-        >
-        return (
-          <SimilarSection
-            mediaItemId={mediaItem.id}
-            mediaSource={mediaItem.source}
-            parentMediaType={mediaItem.type}
-          />
-        )
-      })()}
+      {/* Similar Items */}
+      <SimilarItemsSection
+        mediaItemId={mediaItem.id}
+        mediaSource={mediaItem.source}
+        parentMediaType={mediaItem.type}
+      />
     </div>
   )
 }

@@ -24,6 +24,7 @@ interface SimilarItemsResult {
 interface SimilarItemsSectionProps {
   mediaItemId: string
   mediaSource: string
+  parentMediaType?: string
 }
 
 interface SimilarCardProps {
@@ -62,7 +63,7 @@ function SimilarCard({ item, onOpen, isOpening }: SimilarCardProps) {
   )
 }
 
-export function SimilarItemsSection({ mediaItemId, mediaSource }: SimilarItemsSectionProps) {
+export function SimilarItemsSection({ mediaItemId, mediaSource, parentMediaType: _parentMediaType }: SimilarItemsSectionProps) {
   const router = useRouter()
   const [result, setResult] = useState<SimilarItemsResult | null>(null)
   const [loading, setLoading] = useState(true)
