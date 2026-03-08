@@ -271,7 +271,11 @@ export function FixMatchSection({ mediaItem, onMatchApplied }: FixMatchSectionPr
     setResults([])
     try {
       const type = mediaItem.type
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${type}`)
+      // When searching Hardcover for an audiobook, use BOOK type so we don't
+      // filter out books that lack a tracked audio edition in Hardcover — the book
+      // record provides the metadata (title, cover, etc.) we care about.
+      const searchType = source === 'HARDCOVER' && type === 'AUDIOBOOK' ? 'BOOK' : type
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${searchType}`)
       const data = await res.json() as { results: SearchResult[] }
       // Filter to the selected source
       const filtered = (data.results ?? []).filter((r) => r.source === source)
