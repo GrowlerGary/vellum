@@ -1,8 +1,16 @@
 import { PrismaClient } from '@prisma/client'
 import type { ABSClient } from './abs-client'
 
-// Shape of the ABS `user_item_progress_updated` Socket.IO event.
-// ABS emits the MediaProgress object flat — no nested wrapper.
+// Outer wrapper of the ABS `user_item_progress_updated` Socket.IO event.
+// The actual MediaProgress data is nested under the `data` key.
+interface ABSProgressEventWrapper {
+  id: string
+  sessionId?: string
+  deviceDescription?: string
+  data: ABSProgressEvent
+}
+
+// Shape of the MediaProgress object (nested under the `data` key of the event wrapper).
 interface ABSProgressEvent {
   id: string           // ABS progress record ID
   libraryItemId: string
@@ -96,8 +104,7 @@ export async function syncProgress(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rawEvent: any
 ): Promise<void> {
-  console.log('[ABS] Raw progress event:', JSON.stringify(rawEvent, null, 2))
-  const event = rawEvent as ABSProgressEvent
+  const event = (rawEvent as ABSProgressEventWrapper).data
   const { libraryItemId, episodeId, progress, currentTime, duration, isFinished, currentChapter } = event
 
   // Skip podcast episodes

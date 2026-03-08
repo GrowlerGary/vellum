@@ -10,9 +10,7 @@ Vellum is a self-hosted media tracking PWA (Next.js 15 + PostgreSQL + Prisma 5) 
 
 All work is on **`main`**. PR #6 was merged 2026-03-07. All subsequent fixes went directly to main.
 
-Latest commit: `825a09e` — `debug: log raw ABS progress event shape`
-
-**⚠️ PENDING**: `abs-listener/src/sync.ts` has a temporary `console.log` of the raw ABS progress event. Waiting for user to share the log output to fix the event field mapping. Remove the log line once the event shape is confirmed and the fix is applied.
+Latest commit: (next commit) — `fix: ABS event shape — fields are nested under event.data`
 
 ## All 25 Original Tasks — Complete ✅
 
@@ -46,12 +44,11 @@ Latest commit: `825a09e` — `debug: log raw ABS progress event shape`
   - `/api/me` returns flat User object: `{ id, token, username, ... }` (NOT `{ user: { ... } }`)
   - Bug fixed: was accessing `me.user?.token` (undefined) instead of `me.token`
 
-### ABS Event Shape (in progress)
-- First attempt: assumed `event.mediaProgress.episodeId` (nested) → crash
-- Fixed to: flat destructure from `event` directly
-- Current bug: `progress`, `currentTime`, `duration` still undefined → Prisma validation error
-- **Diagnostic logging added** (`console.log('[ABS] Raw progress event:', JSON.stringify(rawEvent, null, 2))`)
-- Waiting on user to share log output to confirm actual wire format
+### ABS Event Shape (resolved ✅)
+- First attempt: assumed `event.mediaProgress.episodeId` (nested wrapper) → crash
+- Second attempt: flat destructure from `event` directly → `progress`/`currentTime`/`duration` undefined
+- **Root cause confirmed via diagnostic log**: event has a top-level wrapper `{ id, sessionId, deviceDescription, data: { ... } }` — ALL MediaProgress fields are under `event.data`
+- Fixed: `ABSProgressEventWrapper` interface with `data: ABSProgressEvent`; destructure from `event.data`; debug log removed
 
 ### UI Fixes
 - `components/media/StackedCards.tsx`: Wrapped each card slot in `w-[150px] shrink-0` — cards were expanding to fill the full category container width, making Movie/TV Show/etc. categories different heights
@@ -72,11 +69,11 @@ Latest commit: `825a09e` — `debug: log raw ABS progress event shape`
 - `abs-listener/package-lock.json` must be committed (required by `npm ci`)
 - Graceful no-op when `ABS_URL` is empty: `isEnabled()` guard → `process.exit(0)` → no crash-loop
 
-### Event Shape (PENDING CONFIRMATION)
+### Event Shape (confirmed ✅)
 - Event name: `user_item_progress_updated`
-- **Current interface assumes flat** but `progress`/`currentTime`/`duration` are coming back undefined
-- Debug log in `sync.ts` line 102 will reveal actual structure on next deploy + progress event
-- After confirming: update `ABSProgressEvent` interface + remove the debug log
+- **Actual wire format**: outer wrapper `{ id, sessionId, deviceDescription, data: ABSProgressEvent }` — MediaProgress fields are under `event.data`
+- `ABSProgressEventWrapper` interface + `ABSProgressEvent` interface in `sync.ts` reflect confirmed shape
+- Destructure: `const { libraryItemId, ... } = event.data`
 
 ## Features Implemented
 
@@ -225,10 +222,7 @@ npm test          # 21 tests should pass
 node_modules/.bin/tsc --noEmit
 ```
 
-**Next action:** Wait for user to share `[ABS] Raw progress event:` log output, then:
-1. Fix `ABSProgressEvent` interface and destructuring in `abs-listener/src/sync.ts`
-2. Remove the `console.log` debug line
-3. Commit and push
+**Next action:** All known bugs fixed. Deploy updated abs-listener image and verify progress syncs cleanly.
 
 ## Related Repos
 
