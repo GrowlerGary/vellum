@@ -47,24 +47,14 @@ export async function POST(req: NextRequest) {
     select: { id: true },
   })
 
-  // Find existing entry OR create with WANT status (never overwrite existing)
+  // Check if user already has an entry for this item
   const existing = await db.mediaEntry.findUnique({
     where: { userId_mediaItemId: { userId: session.user.id, mediaItemId: mediaItem.id } },
     select: { id: true },
   })
 
-  if (existing) {
-    return NextResponse.json({ entryId: existing.id })
-  }
-
-  const entry = await db.mediaEntry.create({
-    data: {
-      userId: session.user.id,
-      mediaItemId: mediaItem.id,
-      status: 'WANT',
-    },
-    select: { id: true },
+  return NextResponse.json({
+    itemId: mediaItem.id,
+    entryId: existing?.id ?? null,
   })
-
-  return NextResponse.json({ entryId: entry.id }, { status: 201 })
 }
