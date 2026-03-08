@@ -96,6 +96,7 @@ export async function syncProgress(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rawEvent: any
 ): Promise<void> {
+  console.log('[ABS] Raw progress event:', JSON.stringify(rawEvent, null, 2))
   const event = rawEvent as ABSProgressEvent
   const { libraryItemId, episodeId, progress, currentTime, duration, isFinished, currentChapter } = event
 
