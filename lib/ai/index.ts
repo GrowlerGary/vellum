@@ -2,7 +2,7 @@ export interface SuggestionInput {
   title: string;
   type: string;
   rating?: number | null;
-  status: string;
+  status: string | null;
 }
 
 export interface AiSuggestionResult {

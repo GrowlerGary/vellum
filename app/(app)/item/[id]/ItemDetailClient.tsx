@@ -21,7 +21,7 @@ type EntryWithRelations = MediaEntry & {
 
 export default function ItemDetailClient({ entry }: { entry: EntryWithRelations }) {
   const router = useRouter()
-  const [status, setStatus] = useState(entry.status)
+  const [status, setStatus] = useState<string | null>(entry.status)
   const [rating, setRating] = useState<number | null>(entry.rating)
   const [reviewText, setReviewText] = useState(entry.reviewText || '')
   const [deleteStage, setDeleteStage] = useState<'idle' | 'confirm' | 'deleting'>('idle')
@@ -29,11 +29,12 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
   const item = entry.mediaItem
 
   const handleStatusChange = async (newStatus: string) => {
-    setStatus(newStatus as typeof entry.status)
+    const nextStatus = status === newStatus ? null : newStatus
+    setStatus(nextStatus)
     await fetch(`/api/entries/${entry.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify({ status: nextStatus }),
     })
   }
 
@@ -124,7 +125,7 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
           )}
 
           <div className="flex items-center gap-3 flex-wrap">
-            <StatusBadge status={status} />
+            {status && <StatusBadge status={status} />}
             <RatingWidget value={rating} onChange={handleRatingChange} size="lg" />
           </div>
 

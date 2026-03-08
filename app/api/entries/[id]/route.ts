@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const updateSchema = z.object({
-  status: z.enum(["WANT", "IN_PROGRESS", "COMPLETED", "DROPPED"]).optional(),
+  status: z.enum(["WANT", "IN_PROGRESS", "COMPLETED", "DROPPED"]).nullable().optional(),
   rating: z.number().min(0.5).max(5).nullable().optional(),
   reviewText: z.string().nullable().optional(),
   isPublic: z.boolean().optional(),
@@ -31,12 +31,14 @@ export async function PUT(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const { status, startedAt, completedAt, ...rest } = parsed.data;
   const updated = await db.mediaEntry.update({
     where: { id },
     data: {
-      ...parsed.data,
-      startedAt: parsed.data.startedAt ? new Date(parsed.data.startedAt) : undefined,
-      completedAt: parsed.data.completedAt ? new Date(parsed.data.completedAt) : undefined,
+      ...rest,
+      ...(status !== undefined ? { status: status === null ? null : status } : {}),
+      startedAt: startedAt ? new Date(startedAt) : undefined,
+      completedAt: completedAt ? new Date(completedAt) : undefined,
     },
     include: { mediaItem: true },
   });

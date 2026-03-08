@@ -2,11 +2,12 @@ import { STATUS_COLORS, STATUS_LABELS } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
-  status: string;
+  status: string | null | undefined;
   className?: string;
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  if (!status) return null
   return (
     <span
       className={cn(

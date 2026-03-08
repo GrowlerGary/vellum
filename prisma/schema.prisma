@@ -95,7 +95,7 @@ model MediaEntry {
   id          String      @id @default(cuid())
   userId      String
   mediaItemId String
-  status      EntryStatus @default(WANT)
+  status      EntryStatus?
   rating      Float?
   reviewText  String?
   isPublic    Boolean     @default(true)

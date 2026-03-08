@@ -104,7 +104,7 @@ export default async function ProfilePage({ params }: Props) {
                       year={entry.mediaItem.year}
                       posterUrl={entry.mediaItem.posterUrl}
                       mediaType={entry.mediaItem.type}
-                      status={entry.status}
+                      status={entry.status ?? undefined}
                       rating={entry.rating}
                     />
                   ))}

@@ -95,8 +95,8 @@ export async function PATCH(
           })
         } else {
           // Both source and target have entries for this user — keep the better one
-          const sourceRank = STATUS_PRIORITY[sourceEntry.status] ?? 0
-          const targetRank = STATUS_PRIORITY[targetEntry.status] ?? 0
+          const sourceRank = STATUS_PRIORITY[sourceEntry.status ?? ''] ?? 0
+          const targetRank = STATUS_PRIORITY[targetEntry.status ?? ''] ?? 0
 
           if (sourceRank > targetRank) {
             await tx.mediaEntry.update({
