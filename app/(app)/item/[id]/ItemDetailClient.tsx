@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/media/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS, STATUS_LABELS } from '@/lib/utils'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2, X } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
@@ -24,6 +24,8 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
   const [status, setStatus] = useState(entry.status)
   const [rating, setRating] = useState<number | null>(entry.rating)
   const [reviewText, setReviewText] = useState(entry.reviewText || '')
+  const [deleteStage, setDeleteStage] = useState<'idle' | 'confirm' | 'deleting'>('idle')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const item = entry.mediaItem
 
   const handleStatusChange = async (newStatus: string) => {
@@ -50,6 +52,23 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reviewText }),
     })
+  }
+
+  const handleDelete = async () => {
+    setDeleteStage('deleting')
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/media-items/${item.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        router.push('/dashboard')
+      } else {
+        setDeleteStage('idle')
+        setDeleteError('Failed to delete item. Please try again.')
+      }
+    } catch {
+      setDeleteStage('idle')
+      setDeleteError('Network error. Please try again.')
+    }
   }
 
   const icon = MEDIA_TYPE_ICONS[item.type] ?? '📦'
@@ -198,6 +217,47 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
         }}
         onMatchApplied={() => router.refresh()}
       />
+
+      {/* Danger zone */}
+      <section className="pt-4 border-t border-zinc-100">
+        {deleteStage === 'idle' && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            onClick={() => { setDeleteError(null); setDeleteStage('confirm') }}
+          >
+            <Trash2 className="h-4 w-4" /> Delete item
+          </Button>
+        )}
+
+        {(deleteStage === 'confirm' || deleteStage === 'deleting') && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteStage('idle')}
+              disabled={deleteStage === 'deleting'}
+            >
+              <X className="h-4 w-4" /> Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDelete}
+              disabled={deleteStage === 'deleting'}
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleteStage === 'deleting'
+                ? 'Deleting…'
+                : `Delete "${item.title.length > 30 ? item.title.slice(0, 30) + '…' : item.title}"?`}
+            </Button>
+          </div>
+        )}
+        {deleteError && (
+          <p className="mt-2 text-sm text-red-600">{deleteError}</p>
+        )}
+      </section>
     </div>
   )
 }
