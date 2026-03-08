@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MediaItem } from '@prisma/client'
 import { RatingWidget } from '@/components/media/RatingWidget'
@@ -14,6 +14,7 @@ import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
 export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem }) {
   const router = useRouter()
   const [adding, setAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const icon = MEDIA_TYPE_ICONS[mediaItem.type] ?? '📦'
   const typeLabel = MEDIA_TYPE_LABELS[mediaItem.type] ?? mediaItem.type
@@ -21,6 +22,7 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
   const addToLibrary = async (status: string, rating?: number) => {
     if (adding) return
     setAdding(true)
+    setError(null)
     try {
       const res = await fetch('/api/entries', {
         method: 'POST',
@@ -43,7 +45,11 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
       if (res.ok) {
         const entry = await res.json() as { id: string }
         router.push(`/item/${entry.id}`)
+      } else {
+        setError('Failed to add to library. Please try again.')
       }
+    } catch {
+      setError('Network error. Please try again.')
     } finally {
       setAdding(false)
     }
@@ -122,6 +128,7 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
               <span className="text-sm text-zinc-500">Or rate it (adds as Completed):</span>
               <RatingWidget value={null} onChange={handleRating} size="lg" />
             </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
         </div>
       </div>
@@ -134,13 +141,19 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
         </section>
       )}
 
-      {/* Similar Items — parentMediaType prop added in Task 5 */}
-      <SimilarItemsSection
-        mediaItemId={mediaItem.id}
-        mediaSource={mediaItem.source}
-        // TODO: Task 5 adds parentMediaType to SimilarItemsSectionProps
-        {...({ parentMediaType: mediaItem.type } as object)}
-      />
+      {/* Similar Items — parentMediaType prop added to interface in Task 5 */}
+      {(() => {
+        const SimilarSection = SimilarItemsSection as React.ComponentType<
+          React.ComponentProps<typeof SimilarItemsSection> & { parentMediaType: string }
+        >
+        return (
+          <SimilarSection
+            mediaItemId={mediaItem.id}
+            mediaSource={mediaItem.source}
+            parentMediaType={mediaItem.type}
+          />
+        )
+      })()}
     </div>
   )
 }
