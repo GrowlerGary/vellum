@@ -123,8 +123,10 @@ export async function searchHardcover(
 
 export async function getSimilarHardcover(externalId: string): Promise<HardcoverResult[]> {
   // Hardcover has no native "similar books" endpoint.
-  // Strategy: fetch the book's primary author, then search for books by that author.
-  const q = `
+  // Strategy: fetch the book's primary author, search for books by that author,
+  // then batch-fetch full book details to get cover images.
+  // (The search API returns Typesense index results which omit image.url.)
+  const authorQuery = `
     query BookAuthor($id: Int!) {
       books(where: { id: { _eq: $id } }, limit: 1) {
         id
@@ -134,16 +136,39 @@ export async function getSimilarHardcover(externalId: string): Promise<Hardcover
     }
   `;
   try {
-    const data = await gql<HardcoverDetailResponse>(q, { id: parseInt(externalId, 10) });
+    const data = await gql<HardcoverDetailResponse>(authorQuery, { id: parseInt(externalId, 10) });
     const book = data.data?.books?.[0];
     if (!book) return [];
 
     const firstAuthor = book.contributions?.[0]?.author?.name;
     if (!firstAuthor) return [];
 
-    // Search by author name and exclude the original book
-    const results = await searchHardcover(firstAuthor);
-    return results.filter((r) => r.externalId !== externalId).slice(0, 8);
+    // Search by author name, exclude the source book, cap at 8
+    const searchResults = await searchHardcover(firstAuthor);
+    const candidateIds = searchResults
+      .filter((r) => r.externalId !== externalId)
+      .slice(0, 8)
+      .map((r) => parseInt(r.externalId, 10));
+
+    if (candidateIds.length === 0) return [];
+
+    // Batch-fetch full details so we get image.url (absent from Typesense search results)
+    const detailQuery = `
+      query SimilarBooks($ids: [Int!]!) {
+        books(where: { id: { _in: $ids } }, limit: 8) {
+          id title release_year description
+          image { url }
+          cached_tags
+          contributions { author { name } }
+          book_series { series { name } }
+          audio_books { id }
+          audio_seconds
+        }
+      }
+    `;
+    const detailData = await gql<HardcoverDetailResponse>(detailQuery, { ids: candidateIds });
+    const books = detailData.data?.books ?? [];
+    return books.map((b) => mapBook(b));
   } catch {
     return [];
   }

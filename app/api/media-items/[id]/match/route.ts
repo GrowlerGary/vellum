@@ -175,7 +175,12 @@ export async function PATCH(
       await tx.similarItemCache.deleteMany({ where: { mediaItemId: targetId } })
     })
 
-    return NextResponse.json({ id: targetId, merged: true })
+    // Return the surviving MediaEntry ID so the frontend can navigate to the correct
+    // entry page. The detail page routes by MediaEntry ID, not MediaItem ID.
+    const mergedEntry = await db.mediaEntry.findFirst({
+      where: { mediaItemId: targetId, userId: session.user.id },
+    })
+    return NextResponse.json({ id: targetId, entryId: mergedEntry?.id, merged: true })
   }
 
   // ── Normal update (no conflict) ───────────────────────────────────────────

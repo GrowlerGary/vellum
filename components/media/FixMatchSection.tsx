@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Search, X, ChevronRight, Check } from 'lucide-react'
+import { Search, X, ChevronRight, Check, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -111,11 +112,13 @@ function MergePreview({
   external,
   onApply,
   onCancel,
+  error,
 }: {
   current: MediaItemSnapshot
   external: SearchResult
   onApply: (fields: Record<FieldKey, boolean>, externalData: SearchResult) => Promise<void>
   onCancel: () => void
+  error?: string | null
 }) {
   const [selected, setSelected] = useState<Record<FieldKey, boolean>>({
     title: true,
@@ -223,6 +226,13 @@ function MergePreview({
         })}
       </div>
 
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          {error}
+        </div>
+      )}
+
       <Button onClick={handleApply} disabled={applying} className="w-full">
         {applying ? 'Applying…' : <><Check className="h-4 w-4" /> Apply Selected Fields</>}
       </Button>
@@ -240,6 +250,7 @@ interface FixMatchSectionProps {
 type State = 'idle' | 'searching' | 'merging'
 
 export function FixMatchSection({ mediaItem, onMatchApplied }: FixMatchSectionProps) {
+  const router = useRouter()
   const [state, setState] = useState<State>('idle')
   const [query, setQuery] = useState(mediaItem.title)
   const [source, setSource] = useState(defaultSource(mediaItem.type))
@@ -247,6 +258,7 @@ export function FixMatchSection({ mediaItem, onMatchApplied }: FixMatchSectionPr
   const [searching, setSearching] = useState(false)
   const [selected, setSelected] = useState<SearchResult | null>(null)
   const [success, setSuccess] = useState(false)
+  const [applyError, setApplyError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Escape key to cancel
@@ -296,28 +308,54 @@ export function FixMatchSection({ mediaItem, onMatchApplied }: FixMatchSectionPr
     fields: Record<FieldKey, boolean>,
     externalData: SearchResult
   ) => {
-    await fetch(`/api/media-items/${mediaItem.id}/match`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        source: externalData.source,
-        externalId: externalData.externalId,
-        fields,
-        externalData: {
-          title: externalData.title,
-          year: externalData.year,
-          posterUrl: externalData.posterUrl,
-          backdropUrl: externalData.backdropUrl ?? null,
-          overview: externalData.overview,
-          genres: externalData.genres,
-          metadata: externalData.metadata,
-        },
-      }),
-    })
-    setSuccess(true)
-    setState('idle')
-    onMatchApplied()
-    setTimeout(() => setSuccess(false), 3000)
+    setApplyError(null)
+    try {
+      const res = await fetch(`/api/media-items/${mediaItem.id}/match`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: externalData.source,
+          externalId: externalData.externalId,
+          fields,
+          externalData: {
+            title: externalData.title,
+            year: externalData.year,
+            posterUrl: externalData.posterUrl,
+            backdropUrl: externalData.backdropUrl ?? null,
+            overview: externalData.overview,
+            genres: externalData.genres,
+            metadata: externalData.metadata,
+          },
+        }),
+      })
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({})) as { error?: unknown }
+        setApplyError(
+          typeof errBody.error === 'string'
+            ? errBody.error
+            : 'Failed to apply match. Please try again.'
+        )
+        return
+      }
+
+      const data = await res.json() as { id: string; entryId?: string; merged?: boolean }
+
+      if (data.id !== mediaItem.id) {
+        // This item was merged into an existing record.
+        // Navigate using entryId (MediaEntry ID) — the detail page routes by
+        // entry ID, not MediaItem ID. Fall back to data.id only as a safety net.
+        router.push(`/item/${data.entryId ?? data.id}`)
+        return
+      }
+
+      setSuccess(true)
+      setState('idle')
+      onMatchApplied()
+      setTimeout(() => setSuccess(false), 3000)
+    } catch {
+      setApplyError('Network error. Please try again.')
+    }
   }
 
   if (state === 'idle') {
@@ -349,7 +387,8 @@ export function FixMatchSection({ mediaItem, onMatchApplied }: FixMatchSectionPr
           current={mediaItem}
           external={selected}
           onApply={handleApply}
-          onCancel={() => setState('searching')}
+          onCancel={() => { setApplyError(null); setState('searching') }}
+          error={applyError}
         />
       </section>
     )
