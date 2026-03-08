@@ -6,14 +6,15 @@ type AnyHandler = (data: any) => void
 
 export class ABSClient {
   private socket: Socket | null = null
-  private token: string | null = null
+  // socketToken: JWT used only for socket auth (ABS socket only accepts user JWTs)
+  private socketToken: string | null = null
 
   async connect(): Promise<void> {
-    // API keys (Settings → API Keys) work for HTTP but are rejected by ABS socket
-    // auth, which only validates user JWT tokens. Call /api/me with the configured
-    // credential to resolve the user's JWT token for socket auth.
-    // When ABS adds native API key support for sockets, the fallback handles it.
-    this.token = config.absToken
+    // API keys (Settings → API Keys) work for HTTP but ABS socket auth only
+    // validates user JWT tokens. Exchange via /api/me to get the user JWT.
+    // The API key is kept separate and used for all HTTP API calls — using the
+    // refresh JWT for HTTP causes ABS to attempt (and fail) session refreshes.
+    this.socketToken = config.absToken  // fallback if /api/me fails
     try {
       const meRes = await fetch(`${config.absUrl}/api/me`, {
         headers: { Authorization: `Bearer ${config.absToken}` },
@@ -21,27 +22,27 @@ export class ABSClient {
       if (meRes.ok) {
         const me = await meRes.json() as { token?: string }
         if (me.token) {
-          this.token = me.token
+          this.socketToken = me.token
           console.log('[ABS] Resolved JWT token from /api/me for socket auth')
         }
       } else {
-        console.warn(`[ABS] /api/me returned ${meRes.status}, falling back to configured token`)
+        console.warn(`[ABS] /api/me returned ${meRes.status}, falling back to API key for socket auth`)
       }
     } catch (err) {
-      console.warn('[ABS] Could not reach /api/me, falling back to configured token:', err)
+      console.warn('[ABS] Could not reach /api/me, falling back to API key for socket auth:', err)
     }
 
-    // Socket.IO connection with resolved JWT token in auth
+    // Socket.IO connection — JWT in auth header for the initial handshake
     this.socket = io(config.absUrl, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 5000,
-      auth: { token: this.token },
+      auth: { token: this.socketToken },
     })
 
     this.socket.on('connect', () => {
       console.log('[ABS] Socket connected, authenticating...')
-      this.socket!.emit('auth', this.token)
+      this.socket!.emit('auth', this.socketToken)
     })
 
     this.socket.on('init', () => {
@@ -73,9 +74,10 @@ export class ABSClient {
       duration?: number
     }
   }> {
-    if (!this.token) throw new Error('Not authenticated')
+    // Use the API key directly for HTTP — avoids ABS session-refresh errors
+    // that occur when the socket JWT (a refresh token) is used as Bearer.
     const res = await fetch(`${config.absUrl}/api/items/${libraryItemId}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${config.absToken}` },
     })
     if (!res.ok) throw new Error(`Failed to fetch ABS item ${libraryItemId}: ${res.status}`)
     return res.json()
