@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { MEDIA_TYPE_ICONS, MEDIA_TYPE_LABELS } from '@/lib/utils'
 
 interface SimilarItem {
@@ -25,12 +26,21 @@ interface SimilarItemsSectionProps {
   mediaSource: string
 }
 
-function SimilarCard({ item }: { item: SimilarItem }) {
+interface SimilarCardProps {
+  item: SimilarItem
+  onOpen: (item: SimilarItem) => void
+  isOpening: boolean
+}
+
+function SimilarCard({ item, onOpen, isOpening }: SimilarCardProps) {
   const icon = MEDIA_TYPE_ICONS[item.mediaType] ?? '📦'
   const typeLabel = MEDIA_TYPE_LABELS[item.mediaType] ?? item.mediaType
 
   return (
-    <div className="flex-shrink-0 w-[120px] flex flex-col gap-1">
+    <div
+      className={`flex-shrink-0 w-[120px] flex flex-col gap-1 cursor-pointer ${isOpening ? 'opacity-60 pointer-events-none' : ''}`}
+      onClick={() => onOpen(item)}
+    >
       <div className="relative w-[120px] h-[180px] rounded-lg overflow-hidden bg-zinc-100">
         {item.posterUrl ? (
           <Image
@@ -53,8 +63,37 @@ function SimilarCard({ item }: { item: SimilarItem }) {
 }
 
 export function SimilarItemsSection({ mediaItemId, mediaSource }: SimilarItemsSectionProps) {
+  const router = useRouter()
   const [result, setResult] = useState<SimilarItemsResult | null>(null)
   const [loading, setLoading] = useState(true)
+  const [openingId, setOpeningId] = useState<string | null>(null)
+
+  const openItem = async (item: SimilarItem) => {
+    if (openingId) return
+    setOpeningId(item.externalId)
+    try {
+      const res = await fetch('/api/entries/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: item.source,
+          externalId: item.externalId,
+          mediaType: item.mediaType,
+          title: item.title,
+          year: item.year,
+          posterUrl: item.posterUrl,
+          overview: item.overview,
+          genres: item.genres,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json() as { entryId: string }
+        router.push(`/item/${data.entryId}`)
+      }
+    } finally {
+      setOpeningId(null)
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/media-items/${mediaItemId}/similar`)
@@ -111,7 +150,12 @@ export function SimilarItemsSection({ mediaItemId, mediaSource }: SimilarItemsSe
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
         {result.items.map((item) => (
-          <SimilarCard key={`${item.source}-${item.externalId}`} item={item} />
+          <SimilarCard
+            key={`${item.source}-${item.externalId}`}
+            item={item}
+            onOpen={openItem}
+            isOpening={openingId === item.externalId}
+          />
         ))}
       </div>
     </section>
