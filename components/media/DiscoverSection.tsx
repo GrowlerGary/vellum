@@ -47,8 +47,8 @@ function DiscoverTypeSection({ mediaType, items }: DiscoverTypeSectionProps) {
         }),
       })
       if (res.ok) {
-        const data = await res.json() as { entryId: string }
-        router.push(`/item/${data.entryId}`)
+        const data = await res.json() as { itemId: string; entryId: string | null }
+        router.push(data.entryId ? `/item/${data.entryId}` : `/media/${data.itemId}`)
       }
     } finally {
       setOpeningId(null)
