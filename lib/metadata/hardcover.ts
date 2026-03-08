@@ -32,7 +32,11 @@ interface HardcoverBook {
   description?: string;
   book_series?: Array<{ series?: { name?: string } }>;
   contributions?: Array<{ author?: { name?: string } }>;
+  // audio_books: linked audio-service integrations (Libro.fm etc.) — does NOT
+  // cover all audiobook editions. audio_seconds is a more reliable signal.
   audio_books?: Array<{ id: number }>;
+  // audio_seconds: total duration of the default audiobook edition (> 0 = has audio)
+  audio_seconds?: number;
   cached_tags?: { Genre?: string[] };
 }
 
@@ -56,7 +60,9 @@ function mapBook(
   book: HardcoverBook,
   preferAudio = false
 ): HardcoverResult {
-  const hasAudio = (book.audio_books?.length ?? 0) > 0;
+  // Prefer audio_seconds (> 0 = has an audiobook edition) as the hasAudio signal.
+  // audio_books only covers service integrations (Libro.fm etc.), not all editions.
+  const hasAudio = (book.audio_seconds ?? 0) > 0 || (book.audio_books?.length ?? 0) > 0;
   const effectiveType = preferAudio && hasAudio ? "AUDIOBOOK" : "BOOK";
   return {
     id: book.id,
@@ -93,6 +99,9 @@ export async function searchHardcover(
   query: string,
   preferAudio = false
 ): Promise<HardcoverResult[]> {
+  // Note: `results` is a raw Typesense JSON scalar. Fields in hits depend on
+  // what Hardcover indexes — audio_seconds is indexed and more reliable than
+  // audio_books (which only covers service integrations like Libro.fm).
   const q = `
     query Search($q: String!) {
       search(query: $q, query_type: "Book", per_page: 10) {
