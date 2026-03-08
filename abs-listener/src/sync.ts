@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import type { ABSClient } from './abs-client'
 
 // Outer wrapper of the ABS `user_item_progress_updated` Socket.IO event.
@@ -39,36 +39,70 @@ function progressToStatus(progress: number, isFinished: boolean): 'WANT' | 'IN_P
 }
 
 /**
+ * Strip common audiobook qualifiers that ABS appends but Vellum/Hardcover omit.
+ * e.g. "The Hard Line (Unabridged)" → "The Hard Line"
+ */
+function normalizeTitle(title: string): string {
+  return title
+    .replace(/\s*\(unabridged\)/gi, '')
+    .replace(/\s*\(abridged\)/gi, '')
+    .replace(/\s*[-–—]\s*unabridged$/gi, '')
+    .replace(/\s*[-–—]\s*abridged$/gi, '')
+    .trim()
+}
+
+/**
  * Strategy 1: look up by absLibraryItemId stored on MediaItem.
- * Strategy 2: fetch ABS item metadata and try a case-insensitive title match.
- * Returns the MediaItem or null if no match found.
+ * Strategy 2: fetch ABS item metadata; try exact normalized title match,
+ *             then a broader contains-based fallback.
+ * Strategy 3: create a new AUDIOBOOKSHELF MediaItem if nothing matched.
+ * Returns the MediaItem or null on unrecoverable error.
  */
 async function findMediaItem(
   prisma: PrismaClient,
   abs: ABSClient,
   libraryItemId: string
 ) {
-  // Strategy 1: direct ABS ID match
+  // Strategy 1: direct ABS ID match (fast path after first sync)
   const byId = await prisma.mediaItem.findFirst({
     where: { absLibraryItemId: libraryItemId },
   })
-  if (byId) return byId
+  if (byId) {
+    console.log(`[sync] Strategy 1 matched: "${byId.title}" (${byId.id})`)
+    return byId
+  }
 
-  // Strategy 2: fetch metadata from ABS and try title match
+  // Strategy 2: fetch ABS title and match against Vellum
   try {
     const details = await abs.getItemDetails(libraryItemId)
-    const title = details.media.metadata.title?.trim()
-    if (!title) return null
+    const rawTitle = details.media.metadata.title?.trim()
+    if (!rawTitle) return null
 
-    const byTitle = await prisma.mediaItem.findFirst({
+    const normalizedTitle = normalizeTitle(rawTitle)
+    console.log(`[sync] ABS title: "${rawTitle}" → normalized: "${normalizedTitle}"`)
+
+    // 2a: exact match on normalized title
+    let byTitle = await prisma.mediaItem.findFirst({
       where: {
-        title: { equals: title, mode: 'insensitive' },
+        title: { equals: normalizedTitle, mode: 'insensitive' },
         type: { in: ['AUDIOBOOK', 'BOOK'] },
       },
     })
 
+    // 2b: contains fallback (handles subtitle differences)
+    if (!byTitle && normalizedTitle.length > 3) {
+      byTitle = await prisma.mediaItem.findFirst({
+        where: {
+          title: { contains: normalizedTitle, mode: 'insensitive' },
+          type: { in: ['AUDIOBOOK', 'BOOK'] },
+        },
+        orderBy: { updatedAt: 'desc' },
+      })
+    }
+
     if (byTitle) {
-      // Backfill absLibraryItemId so future lookups are instant
+      console.log(`[sync] Strategy 2 matched: "${byTitle.title}" (${byTitle.id})`)
+      // Backfill absLibraryItemId so future lookups hit Strategy 1
       await prisma.mediaItem.update({
         where: { id: byTitle.id },
         data: { absLibraryItemId: libraryItemId },
@@ -77,16 +111,18 @@ async function findMediaItem(
     }
 
     // Strategy 3: create a new AUDIOBOOKSHELF media item
+    console.log(`[sync] No match for "${normalizedTitle}" — creating new MediaItem`)
     const newItem = await prisma.mediaItem.create({
       data: {
         type: 'AUDIOBOOK',
         externalId: libraryItemId,
         source: 'AUDIOBOOKSHELF',
         absLibraryItemId: libraryItemId,
-        title,
+        title: normalizedTitle, // store the clean title, not the "(Unabridged)" version
         metadata: {},
       },
     })
+    console.log(`[sync] Created new MediaItem: "${newItem.title}" (${newItem.id})`)
     return newItem
   } catch (err) {
     console.error('[sync] Failed to resolve ABS item details:', err)
@@ -116,26 +152,42 @@ export async function syncProgress(
     return
   }
 
+  const newStatus = progressToStatus(progress, isFinished)
+
   // Find a MediaEntry for this item (any user — single-instance ABS setup)
   // Prefer the most recent entry to handle edge cases with multiple users
-  const entry = await prisma.mediaEntry.findFirst({
+  let entry = await prisma.mediaEntry.findFirst({
     where: { mediaItemId: mediaItem.id },
     orderBy: { updatedAt: 'desc' },
   })
 
   if (!entry) {
-    console.info(`[sync] No Vellum entry for media item ${mediaItem.id} (${mediaItem.title}), skipping`)
-    return
+    // Auto-create a MediaEntry rather than skipping — single-user ABS setup assumption
+    console.info(`[sync] No entry for "${mediaItem.title}" — auto-creating with status ${newStatus}`)
+    const user = await prisma.user.findFirst()
+    if (!user) {
+      console.warn('[sync] No Vellum users in DB — cannot auto-create entry')
+      return
+    }
+    entry = await prisma.mediaEntry.create({
+      data: {
+        mediaItemId: mediaItem.id,
+        userId: user.id,
+        status: newStatus,
+        sortOrder: 0,
+        ...(newStatus === 'IN_PROGRESS' ? { startedAt: new Date() } : {}),
+        ...(newStatus === 'COMPLETED' ? { completedAt: new Date() } : {}),
+      },
+    })
+    console.log(`[sync] Auto-created entry ${entry.id} for "${mediaItem.title}"`)
   }
-
-  const newStatus = progressToStatus(progress, isFinished)
 
   // Update entry status if it changed (don't downgrade COMPLETED → IN_PROGRESS)
   const statusRank = { WANT: 0, IN_PROGRESS: 1, COMPLETED: 2, DROPPED: 3 }
   const currentRank = statusRank[entry.status as keyof typeof statusRank] ?? 0
   const newRank = statusRank[newStatus]
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     if (newRank > currentRank) {
       await tx.mediaEntry.update({
         where: { id: entry.id },
