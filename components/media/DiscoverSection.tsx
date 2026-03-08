@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { MediaCard } from '@/components/media/MediaCard'
 import { StackedCards } from '@/components/media/StackedCards'
@@ -22,11 +23,43 @@ interface DiscoverTypeSectionProps {
 /** A single collapsible section for one media type's discover results */
 function DiscoverTypeSection({ mediaType, items }: DiscoverTypeSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [openingId, setOpeningId] = useState<string | null>(null)
+  const router = useRouter()
   const icon = MEDIA_TYPE_ICONS[mediaType] ?? '📦'
   const label = MEDIA_TYPE_LABELS[mediaType] ?? mediaType
 
+  const openItem = async (item: DiscoverItem) => {
+    if (openingId) return // prevent double-click
+    setOpeningId(item.externalId)
+    try {
+      const res = await fetch('/api/entries/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: item.source,
+          externalId: item.externalId,
+          mediaType: item.mediaType,
+          title: item.title,
+          year: item.year,
+          posterUrl: item.posterUrl,
+          overview: item.overview,
+          genres: item.genres,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json() as { entryId: string }
+        router.push(`/item/${data.entryId}`)
+      }
+    } finally {
+      setOpeningId(null)
+    }
+  }
+
   const cards = items.map((item) => (
-    <div key={`${item.source}-${item.externalId}`} className="relative">
+    <div
+      key={`${item.source}-${item.externalId}`}
+      className={`relative ${openingId === item.externalId ? 'opacity-60 pointer-events-none' : ''}`}
+    >
       {/* Frequency badge — shows how many seeding items recommended this */}
       {item.frequency > 1 && (
         <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-0.5 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
@@ -40,7 +73,7 @@ function DiscoverTypeSection({ mediaType, items }: DiscoverTypeSectionProps) {
         year={item.year}
         posterUrl={item.posterUrl}
         mediaType={mediaType}
-        href={`/search?q=${encodeURIComponent(item.title)}&type=${mediaType}`}
+        onClick={() => openItem(item)}
       />
     </div>
   ))
