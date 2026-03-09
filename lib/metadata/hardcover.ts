@@ -163,12 +163,16 @@ export async function searchHardcover(
         }
         if (books.length > 0) {
           // Return GQL results (accurate audio_seconds + cover images)
-          // preserving the original Typesense result order where possible
+          // preserving the original Typesense result order where possible.
+          // Use Typesense posterUrl as fallback if GQL doesn't return an image —
+          // GQL may have null image.url for books that Typesense has cached.
           const byId = new Map(books.map((b) => [b.id, b]));
           return searchResults
             .map((r) => {
               const full = byId.get(parseInt(r.externalId, 10));
-              return full ? mapBook(full, preferAudio) : r;
+              if (!full) return r;
+              const mapped = mapBook(full, preferAudio);
+              return { ...mapped, posterUrl: mapped.posterUrl ?? r.posterUrl };
             })
             .filter((r) => r !== null) as HardcoverResult[];
         }

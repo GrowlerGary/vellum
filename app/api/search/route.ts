@@ -44,12 +44,13 @@ export async function GET(req: NextRequest) {
     } else if (type === "AUDIOBOOK") {
       // Explicit audiobook filter: only items that actually have audio
       results.push(...(await searchHardcover(query, true)).filter((r) => r.hasAudio));
-    } else {
+    } else if (!type) {
       // All types: single Hardcover call with preferAudio=true so items with
       // audio surface as AUDIOBOOK and items without audio surface as BOOK.
       // One call avoids showing the same title twice as both BOOK and AUDIOBOOK.
       results.push(...(await searchHardcover(query, true)));
     }
+    // For MOVIE / TV_SHOW / VIDEO_GAME filters, Hardcover is not queried.
   } catch (err) {
     console.error("Search error:", err);
   }

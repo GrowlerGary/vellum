@@ -58,8 +58,8 @@ export function MediaSearch() {
   }
 
   async function openItem(r: SearchResult) {
+    if (openingId) return; // prevent double-click while loading
     const key = `${r.source}-${r.externalId}-${r.mediaType}`;
-    if (openingId === key) return;
     setOpeningId(key);
     try {
       const res = await fetch("/api/entries/open", {
@@ -76,9 +76,15 @@ export function MediaSearch() {
           genres: r.genres,
         }),
       });
-      if (!res.ok) return;
-      const data = await res.json() as { itemId: string; entryId: string | null };
-      router.push(data.entryId ? `/item/${data.entryId}` : `/media/${data.itemId}`);
+      if (res.ok) {
+        const data = await res.json() as { itemId: string; entryId: string | null };
+        router.push(data.entryId ? `/item/${data.entryId}` : `/media/${data.itemId}`);
+      } else {
+        const text = await res.text();
+        console.error(`[MediaSearch] open failed (${res.status}):`, text);
+      }
+    } catch (err) {
+      console.error("[MediaSearch] open error:", err);
     } finally {
       setOpeningId(null);
     }
@@ -124,16 +130,21 @@ export function MediaSearch() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {results.map((r) => {
             const key = `${r.source}-${r.externalId}-${r.mediaType}`;
+            const isOpening = openingId === key;
             return (
-              <MediaCard
+              <div
                 key={key}
-                id={r.externalId}
-                title={r.title}
-                year={r.year}
-                posterUrl={r.posterUrl}
-                mediaType={r.mediaType}
-                onClick={() => openItem(r)}
-              />
+                className={`relative transition-opacity ${isOpening ? "opacity-60 pointer-events-none" : ""}`}
+              >
+                <MediaCard
+                  id={r.externalId}
+                  title={r.title}
+                  year={r.year}
+                  posterUrl={r.posterUrl}
+                  mediaType={r.mediaType}
+                  onClick={() => openItem(r)}
+                />
+              </div>
             );
           })}
         </div>
