@@ -104,7 +104,13 @@ async function gql<T>(query: string, variables: Record<string, unknown> = {}): P
     body: JSON.stringify({ query, variables }),
   });
   if (!res.ok) throw new Error(`Hardcover API error: ${res.status}`);
-  return res.json() as Promise<T>;
+  const json = await res.json() as T & { errors?: Array<{ message: string }> };
+  if (json.errors?.length) {
+    // Log GQL-level errors (e.g. invalid query, permission denied) so they're
+    // visible in server logs rather than silently returning empty data.
+    console.error("[Hardcover] GQL errors:", JSON.stringify(json.errors));
+  }
+  return json;
 }
 
 export async function searchHardcover(
@@ -135,6 +141,8 @@ export async function searchHardcover(
     if (preferAudio && searchResults.length > 0) {
       const ids = searchResults.map((r) => parseInt(r.externalId, 10)).filter((id) => !isNaN(id));
       if (ids.length > 0) {
+        // Editions are fetched without Hasura filtering (avoids potential permission
+        // errors on _gt operators). We filter client-side for audio_seconds > 0.
         const detailQuery = `
           query AudioSearchDetails($ids: [Int!]!) {
             books(where: { id: { _in: $ids } }, limit: 10) {
@@ -145,19 +153,20 @@ export async function searchHardcover(
               book_series { series { name } }
               audio_books { id }
               audio_seconds
-              editions(where: { audio_seconds: { _gt: 0 } }, limit: 1) { id audio_seconds }
+              editions(limit: 10) { id audio_seconds }
             }
           }
         `;
+        console.log(`[Hardcover] batch fetch for ${ids.length} ids (audiobook search)`);
         const detailData = await gql<HardcoverDetailResponse>(detailQuery, { ids });
         const books = detailData.data?.books ?? [];
-        // DEBUG: log audio signal values to diagnose hasAudio detection issues
-        if (process.env.NODE_ENV !== "production") {
-          for (const b of books) {
-            console.log(
-              `[Hardcover] book=${b.id} title="${b.title}" audio_seconds=${b.audio_seconds ?? 0} audio_books=${b.audio_books?.length ?? 0} editions_with_audio=${b.editions?.length ?? 0}`
-            );
-          }
+        console.log(`[Hardcover] batch fetch returned ${books.length} books`);
+        // Log audio signals for every book so we can diagnose hasAudio detection issues
+        for (const b of books) {
+          const audioEditions = (b.editions ?? []).filter(e => (e.audio_seconds ?? 0) > 0);
+          console.log(
+            `[Hardcover] book=${b.id} title="${b.title}" audio_seconds=${b.audio_seconds ?? 0} audio_books=${b.audio_books?.length ?? 0} editions_with_audio=${audioEditions.length}`
+          );
         }
         if (books.length > 0) {
           // Return GQL results (accurate audio_seconds + cover images)
@@ -174,7 +183,8 @@ export async function searchHardcover(
     }
 
     return searchResults;
-  } catch {
+  } catch (err) {
+    console.error("[Hardcover] searchHardcover failed:", err);
     return [];
   }
 }
@@ -246,7 +256,7 @@ export async function getHardcoverDetail(
         book_series { series { name } }
         audio_books { id }
         audio_seconds
-        editions(where: { audio_seconds: { _gt: 0 } }, limit: 1) { id audio_seconds }
+        editions(limit: 10) { id audio_seconds }
       }
     }
   `;
