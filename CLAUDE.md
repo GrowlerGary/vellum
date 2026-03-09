@@ -1,6 +1,6 @@
 # Vellum — Claude Session Memory
 
-Last updated: 2026-03-07 (session 2)
+Last updated: 2026-03-09 (session 3)
 
 ## What This Project Is
 
@@ -25,6 +25,98 @@ Latest commit: (next commit) — `fix: ABS event shape — fields are nested und
 | 7. Discover | Task 16 (algorithm), Task 17 (dashboard section) | ✅ Done |
 | 8. ABS Sidecar | Task 18 (scaffold), Task 19 (Socket.IO), Task 20 (sync), Task 21 (docker-compose), Task 22 (progress display) | ✅ Done |
 | 9. Security | Task 23 (Zod audit), Task 24 (rate limiting), Task 25 (secrets audit) | ✅ Done |
+
+## Session 3 Work (2026-03-09)
+
+### New Features
+
+#### Preview Page (`/media/[id]`)
+- New server component `app/(app)/media/[id]/page.tsx` — for items NOT yet in user's library
+- Client component `app/(app)/media/[id]/MediaPreviewClient.tsx` — mirrors ItemDetailClient layout (poster, genres, overview, similar items)
+- "Add to my library" section: 4 status buttons + RatingWidget (rating auto-adds as COMPLETED)
+- `POST /api/entries/open` updated: upserts MediaItem only, returns `{ itemId, entryId? }` without creating entry
+- Navigation pattern: owned items → `/item/[entryId]`, unowned items → `/media/[itemId]`
+- Error state display on API failure
+
+#### Status Toggle Off
+- `status` field made nullable in Prisma schema (`EntryStatus?`)
+- Migration: `ALTER TABLE "MediaEntry" ALTER COLUMN "status" DROP NOT NULL`
+- Users can now remove a status by clicking the active status badge again
+
+### Behaviour Changes
+
+#### Discover / Similar Items Clicks
+- No longer auto-creates a "Want to Consume" entry on click
+- Clicking always navigates: owned → `/item/[entryId]`, unowned → `/media/[itemId]`
+
+#### Similar Items Type Filter
+- `SimilarItemsSection` now requires `parentMediaType: string` prop
+- Client-side filter: only shows items matching parent media type
+- Audiobook detail page only shows audiobook Similar Items, Book page only shows books
+- Both `app/(app)/item/[id]/ItemDetailClient.tsx` and `app/(app)/media/[id]/MediaPreviewClient.tsx` pass `parentMediaType={item.type}`
+
+#### Discover Full-Width Expand
+- `isExpanded` state lifted from `DiscoverTypeSection` to `DiscoverSection` as `Set<string>`
+- Expanded sections get `md:col-span-2` → fills full screen width
+- Toggle is tracked per-type in the set
+
+#### Search Results Click Navigation
+- `MediaSearch.tsx` no longer opens `AddEntryDialog` (bare form, no item details)
+- Clicking any search result calls `POST /api/entries/open` then navigates (owned → item detail, unowned → preview page)
+- Visual loading state: card fades to 60% opacity + `pointer-events-none` while API call is in progress
+- Error logging: `console.error` on non-200 or network failure
+
+#### All Types Search Now Shows Audiobooks
+- Search route previously ran two Hardcover calls and silently dropped audiobook results for the "All" type
+- Now uses a single `searchHardcover(query, true)` call for "All types" — books with audio surface as AUDIOBOOK, books without surface as BOOK, no duplicates
+- Search route `else` branch bug fixed: was running Hardcover for MOVIE/TV_SHOW/VIDEO_GAME filters too — changed to `else if (!type)`
+
+### Bug Fixes
+
+#### Hardcover `audio_books` Invalid Field (Root Cause of Audiobook Search Failure)
+- `audio_books` is NOT a valid field in Hardcover's `books` GQL type
+- Every batch GQL fetch was returning `{"errors":[{"message":"field 'audio_books' not found in type: 'books'"}]}` — causing all batch fetches to silently return empty data
+- Removed `audio_books { id }` from all three GQL queries in `hardcover.ts`
+- Removed `audio_books` from `HardcoverBook` interface
+
+#### Audiobook Detection via Editions Fallback
+- Some books (e.g. "Summer Frost") have `audio_seconds = 0` at the book level but DO have an audiobook edition in Hardcover's `editions` table
+- Added `editions(limit: 10) { id audio_seconds }` to batch GQL queries (no Hasura `where` filter — avoids potential permission errors on `_gt` operators)
+- `hasAudio` now checks three signals: `audio_seconds > 0` || any edition with `audio_seconds > 0`
+- Client-side filter: `book.editions?.some(e => (e.audio_seconds ?? 0) > 0)`
+
+#### GQL Error Visibility
+- `gql()` function now logs `[Hardcover] GQL errors:` when Hardcover returns a valid HTTP 200 but with GraphQL-level errors in the response body
+- Previously these were silently ignored, making debugging very difficult
+- Also added `[Hardcover] batch fetch for N ids` and `batch fetch returned N books` logs
+
+#### Missing Images in "All Types" Search
+- When GQL batch fetch replaces Typesense results, `mapBook(full, preferAudio)` fully overwrote the result including `posterUrl`
+- If GQL returns `image.url = null` for a book that Typesense had a cached image for, the poster was lost
+- Fixed: `{ ...mapped, posterUrl: mapped.posterUrl ?? r.posterUrl }` — Typesense poster used as fallback
+
+### Key File Changes (Session 3)
+
+```
+app/(app)/media/[id]/page.tsx                 — NEW: preview page server component
+app/(app)/media/[id]/MediaPreviewClient.tsx   — NEW: preview page client component
+app/api/entries/open/route.ts                 — changed: returns {itemId, entryId?}, no auto-entry creation
+app/api/search/route.ts                       — changed: single Hardcover call for All Types; else if (!type) fix
+lib/metadata/hardcover.ts                     — changed: removed audio_books, added editions fallback, GQL error logging, posterUrl fallback
+components/media/MediaSearch.tsx              — changed: open endpoint + navigate on click (no more AddEntryDialog)
+components/media/DiscoverSection.tsx          — changed: isExpanded state lifted, md:col-span-2 on expand
+components/media/SimilarItemsSection.tsx      — changed: parentMediaType required prop, client-side type filter
+app/(app)/item/[id]/ItemDetailClient.tsx      — changed: passes parentMediaType to SimilarItemsSection
+```
+
+### Hardcover GQL — Known Schema Facts
+- `audio_books` field does NOT exist on `books` type — do not use it
+- `audio_seconds` at book level may be 0 even when an audiobook edition exists
+- `editions` relationship exists on `books` — query as `editions(limit: N) { id audio_seconds }`
+- Batch GQL queries must NOT include `audio_books { id }` or any field that doesn't exist on `books`
+- `image { url }` works in GQL but may return null; Typesense may have a cached URL that GQL doesn't — use Typesense as fallback
+
+---
 
 ## Post-Merge Fixes (All on main)
 
@@ -222,7 +314,7 @@ npm test          # 21 tests should pass
 node_modules/.bin/tsc --noEmit
 ```
 
-**Next action:** All known bugs fixed. Deploy updated abs-listener image and verify progress syncs cleanly.
+**Next action (after session 3):** Verify search click navigation is working end-to-end (check browser console for `[MediaSearch] open failed` errors if clicks still appear to do nothing). All audiobook search fixes committed and pushed to main.
 
 ## Related Repos
 
