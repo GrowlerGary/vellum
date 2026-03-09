@@ -200,7 +200,11 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
       </section>
 
       {/* Similar Items */}
-      <SimilarItemsSection mediaItemId={item.id} mediaSource={item.source} />
+      <SimilarItemsSection
+        mediaItemId={item.id}
+        mediaSource={item.source}
+        parentMediaType={item.type}
+      />
 
       {/* Fix Match */}
       <FixMatchSection

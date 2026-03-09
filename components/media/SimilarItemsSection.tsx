@@ -24,7 +24,7 @@ interface SimilarItemsResult {
 interface SimilarItemsSectionProps {
   mediaItemId: string
   mediaSource: string
-  parentMediaType?: string
+  parentMediaType: string
 }
 
 interface SimilarCardProps {
@@ -63,7 +63,7 @@ function SimilarCard({ item, onOpen, isOpening }: SimilarCardProps) {
   )
 }
 
-export function SimilarItemsSection({ mediaItemId, mediaSource, parentMediaType: _parentMediaType }: SimilarItemsSectionProps) {
+export function SimilarItemsSection({ mediaItemId, mediaSource, parentMediaType }: SimilarItemsSectionProps) {
   const router = useRouter()
   const [result, setResult] = useState<SimilarItemsResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -141,6 +141,17 @@ export function SimilarItemsSection({ mediaItemId, mediaSource, parentMediaType:
     )
   }
 
+  const filteredItems = result.items.filter((item) => item.mediaType === parentMediaType)
+
+  if (filteredItems.length === 0) {
+    return (
+      <section>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-2">Similar Items</h2>
+        <p className="text-zinc-400 text-sm">No similar items of this type found.</p>
+      </section>
+    )
+  }
+
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
@@ -150,7 +161,7 @@ export function SimilarItemsSection({ mediaItemId, mediaSource, parentMediaType:
         )}
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-        {result.items.map((item) => (
+        {filteredItems.map((item) => (
           <SimilarCard
             key={`${item.source}-${item.externalId}`}
             item={item}
