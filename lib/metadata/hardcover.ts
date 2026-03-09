@@ -32,9 +32,6 @@ interface HardcoverBook {
   description?: string;
   book_series?: Array<{ series?: { name?: string } }>;
   contributions?: Array<{ author?: { name?: string } }>;
-  // audio_books: linked audio-service integrations (Libro.fm etc.) — does NOT
-  // cover all audiobook editions. audio_seconds is a more reliable signal.
-  audio_books?: Array<{ id: number }>;
   // audio_seconds: total duration of the default audiobook edition (> 0 = has audio).
   // NOTE: Some books have audio_seconds = 0 at the book level even when an audiobook
   // edition exists (e.g. the edition is stored separately). Check `editions` as fallback.
@@ -65,16 +62,13 @@ function mapBook(
   book: HardcoverBook,
   preferAudio = false
 ): HardcoverResult {
-  // Three signals for hasAudio (checked in descending reliability order):
+  // Two signals for hasAudio:
   // 1. audio_seconds at book level (> 0 = book has a default audiobook edition)
-  // 2. audio_books = linked service integrations (Libro.fm etc.)
-  // 3. editions pre-filtered to audio_seconds > 0 — fallback for books like "Summer Frost"
+  // 2. editions with audio_seconds > 0 — fallback for books like "Summer Frost"
   //    where book-level audio_seconds is 0 but a separate audiobook edition exists.
+  // NOTE: audio_books is NOT a valid field in Hardcover's GQL API — do not use it.
   const hasAudioEditions = book.editions?.some((e) => (e.audio_seconds ?? 0) > 0) ?? false;
-  const hasAudio =
-    (book.audio_seconds ?? 0) > 0 ||
-    (book.audio_books?.length ?? 0) > 0 ||
-    hasAudioEditions;
+  const hasAudio = (book.audio_seconds ?? 0) > 0 || hasAudioEditions;
   const effectiveType = preferAudio && hasAudio ? "AUDIOBOOK" : "BOOK";
   return {
     id: book.id,
@@ -151,7 +145,6 @@ export async function searchHardcover(
               cached_tags
               contributions { author { name } }
               book_series { series { name } }
-              audio_books { id }
               audio_seconds
               editions(limit: 10) { id audio_seconds }
             }
@@ -165,7 +158,7 @@ export async function searchHardcover(
         for (const b of books) {
           const audioEditions = (b.editions ?? []).filter(e => (e.audio_seconds ?? 0) > 0);
           console.log(
-            `[Hardcover] book=${b.id} title="${b.title}" audio_seconds=${b.audio_seconds ?? 0} audio_books=${b.audio_books?.length ?? 0} editions_with_audio=${audioEditions.length}`
+            `[Hardcover] book=${b.id} title="${b.title}" audio_seconds=${b.audio_seconds ?? 0} editions_with_audio=${audioEditions.length}`
           );
         }
         if (books.length > 0) {
