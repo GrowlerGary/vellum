@@ -38,19 +38,17 @@ export async function GET(req: NextRequest) {
       results.push(...igdbResults);
     }
 
-    if (!type || type === "BOOK") {
-      const bookResults = await searchHardcover(query, false);
-      results.push(...bookResults);
-    }
-
-    if (!type || type === "AUDIOBOOK") {
-      const audioResults = await searchHardcover(query, true);
-      // Only include books that have audio versions if filtering by AUDIOBOOK
-      const filtered = type === "AUDIOBOOK"
-        ? audioResults.filter((r) => r.hasAudio)
-        : audioResults;
-      // Avoid duplicates with book results
-      if (type === "AUDIOBOOK") results.push(...filtered);
+    if (type === "BOOK") {
+      // Explicit book filter: return all results as BOOK regardless of audio
+      results.push(...(await searchHardcover(query, false)));
+    } else if (type === "AUDIOBOOK") {
+      // Explicit audiobook filter: only items that actually have audio
+      results.push(...(await searchHardcover(query, true)).filter((r) => r.hasAudio));
+    } else {
+      // All types: single Hardcover call with preferAudio=true so items with
+      // audio surface as AUDIOBOOK and items without audio surface as BOOK.
+      // One call avoids showing the same title twice as both BOOK and AUDIOBOOK.
+      results.push(...(await searchHardcover(query, true)));
     }
   } catch (err) {
     console.error("Search error:", err);

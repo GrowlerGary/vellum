@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Loader2 } from "lucide-react";
 import { MediaCard } from "./MediaCard";
-import { AddEntryDialog } from "./AddEntryDialog";
 import { MEDIA_TYPE_LABELS } from "@/lib/utils";
 
 interface SearchResult {
@@ -22,11 +22,12 @@ interface SearchResult {
 }
 
 export function MediaSearch() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<SearchResult | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(async (q: string, t: string) => {
@@ -54,6 +55,33 @@ export function MediaSearch() {
   function handleTypeChange(value: string) {
     setType(value);
     if (query.length >= 2) search(query, value);
+  }
+
+  async function openItem(r: SearchResult) {
+    const key = `${r.source}-${r.externalId}-${r.mediaType}`;
+    if (openingId === key) return;
+    setOpeningId(key);
+    try {
+      const res = await fetch("/api/entries/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: r.source,
+          externalId: r.externalId,
+          mediaType: r.mediaType,
+          title: r.title,
+          year: r.year,
+          posterUrl: r.posterUrl,
+          overview: r.overview,
+          genres: r.genres,
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json() as { itemId: string; entryId: string | null };
+      router.push(data.entryId ? `/item/${data.entryId}` : `/media/${data.itemId}`);
+    } finally {
+      setOpeningId(null);
+    }
   }
 
   return (
@@ -94,27 +122,21 @@ export function MediaSearch() {
 
       {!loading && results.length > 0 && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {results.map((r) => (
-            <MediaCard
-              key={`${r.source}-${r.externalId}`}
-              id={r.externalId}
-              title={r.title}
-              year={r.year}
-              posterUrl={r.posterUrl}
-              mediaType={r.mediaType}
-              onClick={() => setSelected(r)}
-            />
-          ))}
+          {results.map((r) => {
+            const key = `${r.source}-${r.externalId}-${r.mediaType}`;
+            return (
+              <MediaCard
+                key={key}
+                id={r.externalId}
+                title={r.title}
+                year={r.year}
+                posterUrl={r.posterUrl}
+                mediaType={r.mediaType}
+                onClick={() => openItem(r)}
+              />
+            );
+          })}
         </div>
-      )}
-
-      {selected && (
-        <AddEntryDialog
-          item={selected}
-          open={!!selected}
-          onClose={() => setSelected(null)}
-          onSuccess={() => setSelected(null)}
-        />
       )}
     </div>
   );
