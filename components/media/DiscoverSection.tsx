@@ -18,11 +18,12 @@ interface TypeResults {
 interface DiscoverTypeSectionProps {
   mediaType: string
   items: DiscoverItem[]
+  isExpanded: boolean
+  onToggle: () => void
 }
 
 /** A single collapsible section for one media type's discover results */
-function DiscoverTypeSection({ mediaType, items }: DiscoverTypeSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+function DiscoverTypeSection({ mediaType, items, isExpanded, onToggle }: DiscoverTypeSectionProps) {
   const [openingId, setOpeningId] = useState<string | null>(null)
   const router = useRouter()
   const icon = MEDIA_TYPE_ICONS[mediaType] ?? '📦'
@@ -81,7 +82,7 @@ function DiscoverTypeSection({ mediaType, items }: DiscoverTypeSectionProps) {
   return (
     <div className="rounded-xl border border-zinc-100 bg-white p-3 shadow-sm">
       <button
-        onClick={() => setIsExpanded((v) => !v)}
+        onClick={onToggle}
         className="flex items-center gap-2 w-full text-left py-1 hover:bg-zinc-50 rounded-lg px-2 transition-colors"
         aria-expanded={isExpanded}
       >
@@ -111,6 +112,17 @@ export function DiscoverSection() {
   const [results, setResults] = useState<Record<string, TypeResults>>(() =>
     Object.fromEntries(ALL_TYPES.map((t) => [t, { items: [], loading: true }]))
   )
+
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (type: string) => {
+    setExpandedTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
+      return next
+    })
+  }
 
   useEffect(() => {
     for (const type of ALL_TYPES) {
@@ -161,11 +173,17 @@ export function DiscoverSection() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {typesWithResults.map((type) => (
-            <DiscoverTypeSection
+            <div
               key={type}
-              mediaType={type}
-              items={results[type].items}
-            />
+              className={expandedTypes.has(type) ? 'md:col-span-2' : ''}
+            >
+              <DiscoverTypeSection
+                mediaType={type}
+                items={results[type].items}
+                isExpanded={expandedTypes.has(type)}
+                onToggle={() => toggleExpanded(type)}
+              />
+            </div>
           ))}
         </div>
       )}
