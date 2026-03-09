@@ -35,9 +35,14 @@ interface HardcoverBook {
   // audio_books: linked audio-service integrations (Libro.fm etc.) — does NOT
   // cover all audiobook editions. audio_seconds is a more reliable signal.
   audio_books?: Array<{ id: number }>;
-  // audio_seconds: total duration of the default audiobook edition (> 0 = has audio)
+  // audio_seconds: total duration of the default audiobook edition (> 0 = has audio).
+  // NOTE: Some books have audio_seconds = 0 at the book level even when an audiobook
+  // edition exists (e.g. the edition is stored separately). Check `editions` as fallback.
   audio_seconds?: number;
   cached_tags?: { Genre?: string[] };
+  // editions filtered to those with audio_seconds > 0 — reliable fallback when
+  // book-level audio_seconds is 0 but an audiobook edition exists in the DB.
+  editions?: Array<{ id: number; audio_seconds?: number }>;
 }
 
 interface HardcoverSearchResponse {
@@ -60,9 +65,16 @@ function mapBook(
   book: HardcoverBook,
   preferAudio = false
 ): HardcoverResult {
-  // Prefer audio_seconds (> 0 = has an audiobook edition) as the hasAudio signal.
-  // audio_books only covers service integrations (Libro.fm etc.), not all editions.
-  const hasAudio = (book.audio_seconds ?? 0) > 0 || (book.audio_books?.length ?? 0) > 0;
+  // Three signals for hasAudio (checked in descending reliability order):
+  // 1. audio_seconds at book level (> 0 = book has a default audiobook edition)
+  // 2. audio_books = linked service integrations (Libro.fm etc.)
+  // 3. editions pre-filtered to audio_seconds > 0 — fallback for books like "Summer Frost"
+  //    where book-level audio_seconds is 0 but a separate audiobook edition exists.
+  const hasAudioEditions = book.editions?.some((e) => (e.audio_seconds ?? 0) > 0) ?? false;
+  const hasAudio =
+    (book.audio_seconds ?? 0) > 0 ||
+    (book.audio_books?.length ?? 0) > 0 ||
+    hasAudioEditions;
   const effectiveType = preferAudio && hasAudio ? "AUDIOBOOK" : "BOOK";
   return {
     id: book.id,
@@ -133,11 +145,20 @@ export async function searchHardcover(
               book_series { series { name } }
               audio_books { id }
               audio_seconds
+              editions(where: { audio_seconds: { _gt: 0 } }, limit: 1) { id audio_seconds }
             }
           }
         `;
         const detailData = await gql<HardcoverDetailResponse>(detailQuery, { ids });
         const books = detailData.data?.books ?? [];
+        // DEBUG: log audio signal values to diagnose hasAudio detection issues
+        if (process.env.NODE_ENV !== "production") {
+          for (const b of books) {
+            console.log(
+              `[Hardcover] book=${b.id} title="${b.title}" audio_seconds=${b.audio_seconds ?? 0} audio_books=${b.audio_books?.length ?? 0} editions_with_audio=${b.editions?.length ?? 0}`
+            );
+          }
+        }
         if (books.length > 0) {
           // Return GQL results (accurate audio_seconds + cover images)
           // preserving the original Typesense result order where possible
@@ -225,6 +246,7 @@ export async function getHardcoverDetail(
         book_series { series { name } }
         audio_books { id }
         audio_seconds
+        editions(where: { audio_seconds: { _gt: 0 } }, limit: 1) { id audio_seconds }
       }
     }
   `;
