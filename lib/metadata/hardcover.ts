@@ -112,10 +112,47 @@ export async function searchHardcover(
   try {
     const data = await gql<HardcoverSearchResponse>(q, { q: query });
     const hits = data.data?.search?.results?.hits ?? [];
-    return hits
+    const searchResults = hits
       .map((h) => h.document)
       .filter((b): b is HardcoverBook => !!b)
       .map((b) => mapBook(b, preferAudio));
+
+    // When searching for audiobooks, Typesense may not have accurate audio_seconds
+    // for all books. Batch-fetch full GQL details to get reliable hasAudio data.
+    // (Same pattern getSimilarHardcover uses to get cover images.)
+    if (preferAudio && searchResults.length > 0) {
+      const ids = searchResults.map((r) => parseInt(r.externalId, 10)).filter((id) => !isNaN(id));
+      if (ids.length > 0) {
+        const detailQuery = `
+          query AudioSearchDetails($ids: [Int!]!) {
+            books(where: { id: { _in: $ids } }, limit: 10) {
+              id title release_year description
+              image { url }
+              cached_tags
+              contributions { author { name } }
+              book_series { series { name } }
+              audio_books { id }
+              audio_seconds
+            }
+          }
+        `;
+        const detailData = await gql<HardcoverDetailResponse>(detailQuery, { ids });
+        const books = detailData.data?.books ?? [];
+        if (books.length > 0) {
+          // Return GQL results (accurate audio_seconds + cover images)
+          // preserving the original Typesense result order where possible
+          const byId = new Map(books.map((b) => [b.id, b]));
+          return searchResults
+            .map((r) => {
+              const full = byId.get(parseInt(r.externalId, 10));
+              return full ? mapBook(full, preferAudio) : r;
+            })
+            .filter((r) => r !== null) as HardcoverResult[];
+        }
+      }
+    }
+
+    return searchResults;
   } catch {
     return [];
   }
@@ -187,6 +224,7 @@ export async function getHardcoverDetail(
         contributions { author { name } }
         book_series { series { name } }
         audio_books { id }
+        audio_seconds
       }
     }
   `;
