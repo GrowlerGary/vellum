@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   const externalId = `abs-${userId}-${encodeURIComponent(title)}`;
 
   const mediaItem = await db.mediaItem.upsert({
-    where: { source_externalId: { source: "MANUAL", externalId } },
+    where: { source_externalId_type: { source: "MANUAL", externalId, type: "AUDIOBOOK" } },
     create: {
       type: "AUDIOBOOK",
       externalId,

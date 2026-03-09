@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   // Upsert the MediaItem (update cosmetic fields only)
   const mediaItem = await db.mediaItem.upsert({
-    where: { source_externalId: { source, externalId } },
+    where: { source_externalId_type: { source, externalId, type: mediaType } },
     create: {
       source,
       externalId,

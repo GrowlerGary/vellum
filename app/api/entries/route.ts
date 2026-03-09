@@ -60,9 +60,10 @@ export async function POST(req: NextRequest) {
   // Upsert media item
   const mediaItem = await db.mediaItem.upsert({
     where: {
-      source_externalId: {
+      source_externalId_type: {
         source: itemData.source,
         externalId: itemData.externalId,
+        type: itemData.type,
       },
     },
     create: {

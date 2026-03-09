@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
     suggestions.map(async (s) => {
       const mediaItem = await db.mediaItem.upsert({
         where: {
-          source_externalId: { source: "MANUAL", externalId: `ai-${slugify(s.title)}-${s.year ?? 0}` },
+          source_externalId_type: { source: "MANUAL", externalId: `ai-${slugify(s.title)}-${s.year ?? 0}`, type: mediaType as never },
         },
         create: {
           type: mediaType as never,

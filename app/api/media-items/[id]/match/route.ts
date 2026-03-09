@@ -50,17 +50,20 @@ export async function PATCH(
   const item = await db.mediaItem.findUnique({ where: { id } })
   if (!item) return NextResponse.json({ error: 'Media item not found' }, { status: 404 })
 
-  // Check whether the target (source, externalId) already exists as a different item.
+  // Check whether the target (source, externalId, type) already exists as a different item.
   // This happens when e.g. an ABS-created duplicate is being matched to a Hardcover item
   // that was already saved via "Want to Consume". Without conflict detection the update would
-  // hit the @@unique([source, externalId]) constraint and silently fail.
+  // hit the @@unique([source, externalId, type]) constraint and silently fail.
   //
   // Use findUnique with the composite key (more reliable than findFirst + NOT filter).
+  // We use item.type so the conflict check is scoped to the same media type — a BOOK and
+  // an AUDIOBOOK with the same Hardcover externalId are now separate rows and don't conflict.
   const existingForTarget = await db.mediaItem.findUnique({
     where: {
-      source_externalId: {
+      source_externalId_type: {
         source: parsed.data.source,
         externalId: parsed.data.externalId,
+        type: item.type,
       },
     },
   })

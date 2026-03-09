@@ -86,7 +86,7 @@ model MediaItem {
   suggestions AiSuggestion[]
   similarCache SimilarItemCache?
 
-  @@unique([source, externalId])
+  @@unique([source, externalId, type])
   @@index([type])
   @@index([title])
 }

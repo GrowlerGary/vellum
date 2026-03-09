@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
   const source = payload.imdb_id ? "TMDB" : "MANUAL";
 
   const mediaItem = await db.mediaItem.upsert({
-    where: { source_externalId: { source, externalId } },
+    where: { source_externalId_type: { source, externalId, type: mediaType } },
     create: {
       type: mediaType,
       externalId,
