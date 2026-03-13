@@ -151,7 +151,17 @@ Add a simple fetch wrapper with 150ms minimum between requests to Audnexus (matc
 
 ---
 
-## Step 7: Clean up Hardcover audiobook code
+## Step 7: Add `AUDNEXUS` to Zod validation schemas
+
+Three API routes validate the `source` field with Zod enums — all need `AUDNEXUS` added:
+
+- **`app/api/entries/open/route.ts`** (line 7): `z.enum(['TMDB', 'IGDB', 'HARDCOVER', 'MANUAL', 'AUDIOBOOKSHELF', 'AUDNEXUS'])`
+- **`app/api/entries/route.ts`** (line 9): `z.enum(["TMDB", "IGDB", "HARDCOVER", "MANUAL", "AUDNEXUS"])`
+- **`app/api/media-items/[id]/match/route.ts`** (line 7): `z.enum(['TMDB', 'IGDB', 'HARDCOVER', 'AUDNEXUS'])`
+
+---
+
+## Step 8: Clean up Hardcover audiobook code
 
 **File:** `lib/metadata/hardcover.ts`
 
@@ -184,6 +194,9 @@ Add a simple fetch wrapper with 150ms minimum between requests to Audnexus (matc
 | `lib/similar.ts` | Add AUDNEXUS case; update AUDIOBOOK fallback |
 | `components/media/FixMatchSection.tsx` | Add AUDNEXUS source; default AUDIOBOOK to it |
 | `lib/metadata/hardcover.ts` | Remove all audiobook/audio detection code |
+| `app/api/entries/open/route.ts` | Add `AUDNEXUS` to Zod source enum |
+| `app/api/entries/route.ts` | Add `AUDNEXUS` to Zod source enum |
+| `app/api/media-items/[id]/match/route.ts` | Add `AUDNEXUS` to Zod source enum |
 
 ## Files NOT Changed (no changes needed)
 
@@ -191,7 +204,6 @@ Add a simple fetch wrapper with 150ms minimum between requests to Audnexus (matc
 - `components/media/SimilarItemsSection.tsx` — generic, filters by parentMediaType
 - `components/media/DiscoverSection.tsx` — generic, uses similar items
 - `lib/discover.ts` — generic, aggregates from similar items cache
-- `app/api/entries/open/route.ts` — generic, upserts by source/externalId/type
 - `app/(app)/media/[id]/MediaPreviewClient.tsx` — generic
 - `app/(app)/item/[id]/ItemDetailClient.tsx` — generic
 - `abs-listener/` — ABS sidecar is separate (uses AUDIOBOOKSHELF source)
