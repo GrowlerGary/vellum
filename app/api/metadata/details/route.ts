@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { getTmdbDetail } from '@/lib/metadata/tmdb'
 import { getIgdbDetail } from '@/lib/metadata/igdb'
 import { getHardcoverDetail } from '@/lib/metadata/hardcover'
+import { getAudnexusDetail } from '@/lib/metadata/audnexus'
 import { rateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
@@ -35,7 +36,10 @@ export async function GET(request: NextRequest) {
         detail = await getIgdbDetail(id)
         break
       case 'HARDCOVER':
-        detail = await getHardcoverDetail(id, mediaType === 'AUDIOBOOK')
+        detail = await getHardcoverDetail(id)
+        break
+      case 'AUDNEXUS':
+        detail = await getAudnexusDetail(id)
         break
       default:
         return NextResponse.json({ error: `Unknown source: ${source}` }, { status: 400 })

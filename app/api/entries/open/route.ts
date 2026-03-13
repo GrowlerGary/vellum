@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { z } from 'zod'
 
 const openSchema = z.object({
-  source: z.enum(['TMDB', 'IGDB', 'HARDCOVER', 'MANUAL', 'AUDIOBOOKSHELF']),
+  source: z.enum(['TMDB', 'IGDB', 'HARDCOVER', 'MANUAL', 'AUDIOBOOKSHELF', 'AUDNEXUS']),
   externalId: z.string().min(1),
   mediaType: z.enum(['MOVIE', 'TV_SHOW', 'BOOK', 'AUDIOBOOK', 'VIDEO_GAME']),
   title: z.string().min(1),

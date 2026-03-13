@@ -27,6 +27,7 @@ enum MetadataSource {
   HARDCOVER
   AUDIOBOOKSHELF
   MANUAL
+  AUDNEXUS
 }
 
 enum EntryStatus {

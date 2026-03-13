@@ -59,12 +59,14 @@ const ALL_SOURCES = [
   { value: 'TMDB', label: 'TMDB (Movies & TV)' },
   { value: 'IGDB', label: 'IGDB (Games)' },
   { value: 'HARDCOVER', label: 'Hardcover (Books)' },
+  { value: 'AUDNEXUS', label: 'Audnexus (Audiobooks)' },
 ]
 
 // Default source based on media type
 function defaultSource(mediaType: string): string {
   if (mediaType === 'VIDEO_GAME') return 'IGDB'
-  if (mediaType === 'BOOK' || mediaType === 'AUDIOBOOK') return 'HARDCOVER'
+  if (mediaType === 'AUDIOBOOK') return 'AUDNEXUS'
+  if (mediaType === 'BOOK') return 'HARDCOVER'
   return 'TMDB'
 }
 
@@ -283,11 +285,7 @@ export function FixMatchSection({ mediaItem, onMatchApplied }: FixMatchSectionPr
     setResults([])
     try {
       const type = mediaItem.type
-      // When searching Hardcover for an audiobook, use BOOK type so we don't
-      // filter out books that lack a tracked audio edition in Hardcover — the book
-      // record provides the metadata (title, cover, etc.) we care about.
-      const searchType = source === 'HARDCOVER' && type === 'AUDIOBOOK' ? 'BOOK' : type
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${searchType}`)
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${type}`)
       const data = await res.json() as { results: SearchResult[] }
       // Filter to the selected source
       const filtered = (data.results ?? []).filter((r) => r.source === source)

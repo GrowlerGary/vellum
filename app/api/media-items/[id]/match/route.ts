@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { z } from 'zod'
 
 const matchSchema = z.object({
-  source: z.enum(['TMDB', 'IGDB', 'HARDCOVER']),
+  source: z.enum(['TMDB', 'IGDB', 'HARDCOVER', 'AUDNEXUS']),
   externalId: z.string().min(1),
   fields: z.object({
     title: z.boolean().optional(),
