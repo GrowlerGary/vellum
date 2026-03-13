@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { getSimilarTmdb } from '@/lib/metadata/tmdb'
 import { getSimilarIgdb } from '@/lib/metadata/igdb'
 import { getSimilarHardcover } from '@/lib/metadata/hardcover'
+import { getSimilarAudnexus } from '@/lib/metadata/audnexus'
 
 const CACHE_TTL_DAYS = 7
 
@@ -74,6 +75,19 @@ async function fetchFromSource(
         genres: r.genres,
       }))
     }
+    case 'AUDNEXUS': {
+      const results = await getSimilarAudnexus(externalId)
+      return results.map((r) => ({
+        externalId: r.externalId,
+        source: 'AUDNEXUS',
+        mediaType: 'AUDIOBOOK',
+        title: r.title,
+        year: r.year,
+        posterUrl: r.posterUrl,
+        overview: r.overview,
+        genres: r.genres,
+      }))
+    }
     default:
       return []
   }
@@ -85,7 +99,21 @@ async function fetchByTitleFallback(
 ): Promise<SimilarItem[]> {
   // For MANUAL / AUDIOBOOKSHELF items: do a title-based search on the likely source
   try {
-    if (mediaType === 'BOOK' || mediaType === 'AUDIOBOOK') {
+    if (mediaType === 'AUDIOBOOK') {
+      const { searchAudnexus } = await import('@/lib/metadata/audnexus')
+      const results = await searchAudnexus(title)
+      return results.map((r) => ({
+        externalId: r.externalId,
+        source: 'AUDNEXUS',
+        mediaType: 'AUDIOBOOK',
+        title: r.title,
+        year: r.year,
+        posterUrl: r.posterUrl,
+        overview: r.overview,
+        genres: r.genres,
+      }))
+    }
+    if (mediaType === 'BOOK') {
       const results = await getSimilarHardcover(title) // title-based fallback
       return results.map((r) => ({
         externalId: r.externalId,

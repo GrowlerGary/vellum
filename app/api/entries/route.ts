@@ -6,7 +6,7 @@ import { z } from "zod";
 const createEntrySchema = z.object({
   mediaItem: z.object({
     externalId: z.string(),
-    source: z.enum(["TMDB", "IGDB", "HARDCOVER", "MANUAL"]),
+    source: z.enum(["TMDB", "IGDB", "HARDCOVER", "MANUAL", "AUDNEXUS"]),
     type: z.enum(["MOVIE", "TV_SHOW", "BOOK", "AUDIOBOOK", "VIDEO_GAME"]),
     title: z.string(),
     year: z.number().nullable().optional(),

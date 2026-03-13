@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { searchTmdb } from "@/lib/metadata/tmdb";
 import { searchIgdb } from "@/lib/metadata/igdb";
 import { searchHardcover } from "@/lib/metadata/hardcover";
+import { searchAudnexus } from "@/lib/metadata/audnexus";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
@@ -39,18 +40,20 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === "BOOK") {
-      // Explicit book filter: return all results as BOOK regardless of audio
-      results.push(...(await searchHardcover(query, false)));
+      // Explicit book filter: Hardcover, books only (no audio detection)
+      results.push(...(await searchHardcover(query)));
     } else if (type === "AUDIOBOOK") {
-      // Explicit audiobook filter: only items that actually have audio
-      results.push(...(await searchHardcover(query, true)).filter((r) => r.hasAudio));
+      // Explicit audiobook filter: Audnexus via Audible ASIN discovery
+      results.push(...(await searchAudnexus(query)));
     } else if (!type) {
-      // All types: single Hardcover call with preferAudio=true so items with
-      // audio surface as AUDIOBOOK and items without audio surface as BOOK.
-      // One call avoids showing the same title twice as both BOOK and AUDIOBOOK.
-      results.push(...(await searchHardcover(query, true)));
+      // All types: Hardcover for books + Audnexus for audiobooks, run in parallel
+      const [bookResults, audiobookResults] = await Promise.all([
+        searchHardcover(query),
+        searchAudnexus(query),
+      ]);
+      results.push(...bookResults, ...audiobookResults);
     }
-    // For MOVIE / TV_SHOW / VIDEO_GAME filters, Hardcover is not queried.
+    // For MOVIE / TV_SHOW / VIDEO_GAME filters, Hardcover/Audnexus are not queried.
   } catch (err) {
     console.error("Search error:", err);
   }
