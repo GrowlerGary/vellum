@@ -185,13 +185,19 @@ export async function getSimilarAudnexus(asin: string): Promise<AudnexusResult[]
       .filter((a): a is string => Boolean(a))
       .slice(0, 8)
 
-    if (similarAsins.length === 0) return []
+    if (similarAsins.length === 0) {
+      console.log(`[Audnexus] no similarProducts for ASIN ${asin}`)
+      return []
+    }
 
     const settled = await Promise.allSettled(similarAsins.map((a) => getAudnexusDetail(a)))
-    return settled
+    const results = settled
       .filter((r): r is PromiseFulfilledResult<AudnexusResult> => r.status === 'fulfilled' && r.value !== null)
       .map((r) => r.value)
-  } catch {
+    console.log(`[Audnexus] similar for ${asin}: found ${similarAsins.length} ASINs, resolved ${results.length}`)
+    return results
+  } catch (err) {
+    console.error(`[Audnexus] getSimilarAudnexus failed for ASIN ${asin}:`, err)
     return []
   }
 }
