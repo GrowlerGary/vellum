@@ -69,12 +69,12 @@ export async function POST(req: NextRequest) {
       posterUrl: posterUrl ?? null,
       overview: overview ?? '',
       genres: genres ?? [],
-      metadata,
+      metadata: metadata as object,
     },
     update: {
       title,
       posterUrl: posterUrl ?? null,
-      metadata,
+      metadata: metadata as object,
     },
     select: { id: true },
   })
