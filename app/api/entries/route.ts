@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { getTmdbDetail } from "@/lib/metadata/tmdb";
+import { getHardcoverDetail } from "@/lib/metadata/hardcover";
+import { getAudnexusDetail } from "@/lib/metadata/audnexus";
+import { getIgdbDetail } from "@/lib/metadata/igdb";
 
 const createEntrySchema = z.object({
   mediaItem: z.object({
@@ -57,6 +61,36 @@ export async function POST(req: NextRequest) {
 
   const { mediaItem: itemData, ...entryData } = parsed.data;
 
+  // Fetch rich metadata from the provider if not already provided
+  let metadata = itemData.metadata ?? {};
+  const hasRichMetadata = Object.keys(metadata).length > 2; // more than just an ID field
+  if (!hasRichMetadata) {
+    try {
+      let detail;
+      switch (itemData.source) {
+        case "TMDB": {
+          const tmdbType = itemData.type === "TV_SHOW" ? "tv" : "movie";
+          detail = await getTmdbDetail(itemData.externalId, tmdbType);
+          break;
+        }
+        case "HARDCOVER":
+          detail = await getHardcoverDetail(itemData.externalId);
+          break;
+        case "AUDNEXUS":
+          detail = await getAudnexusDetail(itemData.externalId);
+          break;
+        case "IGDB":
+          detail = await getIgdbDetail(itemData.externalId);
+          break;
+      }
+      if (detail) {
+        metadata = detail.metadata as Record<string, unknown>;
+      }
+    } catch (err) {
+      console.error("[entries] metadata enrichment failed:", err);
+    }
+  }
+
   // Upsert media item
   const mediaItem = await db.mediaItem.upsert({
     where: {
@@ -70,12 +104,13 @@ export async function POST(req: NextRequest) {
       ...itemData,
       genres: itemData.genres ?? [],
       overview: itemData.overview ?? "",
-      metadata: (itemData.metadata ?? {}) as object,
+      metadata: metadata as object,
     },
     update: {
       title: itemData.title,
       posterUrl: itemData.posterUrl,
       backdropUrl: itemData.backdropUrl,
+      metadata: metadata as object,
     },
   });
 
