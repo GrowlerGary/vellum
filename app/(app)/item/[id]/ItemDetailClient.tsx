@@ -13,6 +13,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
 import { FixMatchSection } from '@/components/media/FixMatchSection'
+import { MediaDetails } from '@/components/media/MediaDetails'
 
 type EntryWithRelations = MediaEntry & {
   mediaItem: MediaItem
@@ -154,6 +155,13 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
           </div>
         </div>
       </div>
+
+      {/* Details */}
+      <MediaDetails
+        type={item.type}
+        metadata={item.metadata as unknown as Record<string, unknown>}
+        year={item.year}
+      />
 
       {/* Overview */}
       {item.overview && (
