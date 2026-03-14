@@ -50,22 +50,40 @@ interface TmdbSimilarItem {
   genre_ids?: number[];
 }
 
+interface TmdbCastMember {
+  name: string;
+  character: string;
+  order: number;
+}
+
+interface TmdbCrewMember {
+  name: string;
+  job: string;
+  department: string;
+}
+
 interface TmdbDetail {
   id: number;
   title?: string;
   name?: string;
   release_date?: string;
   first_air_date?: string;
+  last_air_date?: string;
   poster_path?: string;
   backdrop_path?: string;
   overview?: string;
   genres?: Array<{ id: number; name: string }>;
   vote_average?: number;
   runtime?: number;
+  episode_run_time?: number[];
   status?: string;
   tagline?: string;
   number_of_seasons?: number;
   number_of_episodes?: number;
+  credits?: {
+    cast?: TmdbCastMember[];
+    crew?: TmdbCrewMember[];
+  };
 }
 
 function mapItem(item: TmdbSearchItem): TmdbResult | null {
@@ -142,12 +160,19 @@ export async function getTmdbDetail(
   id: string,
   type: "movie" | "tv"
 ): Promise<TmdbResult | null> {
-  const url = `${TMDB_BASE}/${type}/${id}`;
+  const url = `${TMDB_BASE}/${type}/${id}?append_to_response=credits`;
   const res = await fetch(url, { headers: getHeaders() });
   if (!res.ok) return null;
   const item = await res.json() as TmdbDetail;
   const isMovie = type === "movie";
   const rawYear = isMovie ? item.release_date : item.first_air_date;
+
+  const director = item.credits?.crew?.find((c) => c.job === "Director")?.name ?? null;
+  const cast = (item.credits?.cast ?? [])
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 5)
+    .map((c) => c.name);
+
   return {
     id: item.id,
     mediaType: isMovie ? "MOVIE" : "TV_SHOW",
@@ -171,6 +196,10 @@ export async function getTmdbDetail(
       tagline: item.tagline,
       numberOfSeasons: item.number_of_seasons,
       numberOfEpisodes: item.number_of_episodes,
+      director,
+      cast,
+      lastAirDate: item.last_air_date ?? null,
+      episodeRunTime: item.episode_run_time?.[0] ?? null,
     },
   };
 }

@@ -10,6 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
+import { MediaDetails } from '@/components/media/MediaDetails'
 
 export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem }) {
   const router = useRouter()
@@ -132,6 +133,13 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
           </div>
         </div>
       </div>
+
+      {/* Details */}
+      <MediaDetails
+        type={mediaItem.type}
+        metadata={mediaItem.metadata as unknown as Record<string, unknown>}
+        year={mediaItem.year}
+      />
 
       {/* Overview */}
       {mediaItem.overview && (
