@@ -14,6 +14,7 @@ import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
 import { FixMatchSection } from '@/components/media/FixMatchSection'
 import { MediaDetails } from '@/components/media/MediaDetails'
+import { ExternalRating } from '@/components/media/ExternalRating'
 
 type EntryWithRelations = MediaEntry & {
   mediaItem: MediaItem
@@ -128,6 +129,11 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
           <div className="flex items-center gap-3 flex-wrap">
             {status && <StatusBadge status={status} />}
             <RatingWidget value={rating} onChange={handleRatingChange} size="lg" />
+            <ExternalRating
+              mediaType={item.type}
+              metadata={item.metadata as unknown as Record<string, unknown>}
+              size="md"
+            />
           </div>
 
           {/* Status selector buttons */}

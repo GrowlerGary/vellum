@@ -64,6 +64,7 @@ interface TmdbCrewMember {
 
 interface TmdbDetail {
   id: number;
+  imdb_id?: string;
   title?: string;
   name?: string;
   release_date?: string;
@@ -83,6 +84,9 @@ interface TmdbDetail {
   credits?: {
     cast?: TmdbCastMember[];
     crew?: TmdbCrewMember[];
+  };
+  external_ids?: {
+    imdb_id?: string;
   };
 }
 
@@ -160,7 +164,8 @@ export async function getTmdbDetail(
   id: string,
   type: "movie" | "tv"
 ): Promise<TmdbResult | null> {
-  const url = `${TMDB_BASE}/${type}/${id}?append_to_response=credits`;
+  const appendList = type === "tv" ? "credits,external_ids" : "credits";
+  const url = `${TMDB_BASE}/${type}/${id}?append_to_response=${appendList}`;
   const res = await fetch(url, { headers: getHeaders() });
   if (!res.ok) return null;
   const item = await res.json() as TmdbDetail;
@@ -172,6 +177,16 @@ export async function getTmdbDetail(
     .sort((a, b) => a.order - b.order)
     .slice(0, 5)
     .map((c) => c.name);
+
+  // Movies return imdb_id at top level; TV shows need external_ids append
+  const imdbId = item.imdb_id ?? item.external_ids?.imdb_id ?? null;
+
+  // Fetch Rotten Tomatoes score via OMDB if we have an IMDB ID
+  let rottenTomatoesScore: number | null = null;
+  if (imdbId) {
+    const { fetchRottenTomatoesScore } = await import('./omdb');
+    rottenTomatoesScore = await fetchRottenTomatoesScore(imdbId);
+  }
 
   return {
     id: item.id,
@@ -190,7 +205,9 @@ export async function getTmdbDetail(
     source: "TMDB",
     metadata: {
       tmdbId: item.id,
+      imdbId,
       voteAverage: item.vote_average,
+      rottenTomatoesScore,
       runtime: item.runtime,
       status: item.status,
       tagline: item.tagline,

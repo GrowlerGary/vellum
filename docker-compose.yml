@@ -51,11 +51,13 @@ services:
       # TMDB:      https://www.themoviedb.org/settings/api
       # IGDB:      https://dev.twitch.tv/console  (create a Twitch app)
       # Hardcover: https://hardcover.app/account/api
+      # OMDB:      https://www.omdbapi.com/apikey.aspx  (for Rotten Tomatoes scores)
       # ---------------------------------------------------------------------------
       TMDB_API_KEY: ""
       IGDB_CLIENT_ID: ""
       IGDB_CLIENT_SECRET: ""
       HARDCOVER_API_KEY: ""
+      OMDB_API_KEY: ""
 
       # ---------------------------------------------------------------------------
       # OPTIONAL — AI provider for smart features

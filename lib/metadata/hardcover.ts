@@ -172,7 +172,25 @@ export async function getHardcoverDetail(id: string): Promise<HardcoverResult | 
   try {
     const data = await gql<HardcoverDetailResponse>(q, { id: parseInt(id, 10) });
     const book = data.data?.books?.[0];
-    return book ? mapBook(book) : null;
+    if (!book) return null;
+
+    const result = mapBook(book);
+
+    // Enrich with Google Books rating
+    const authors = (book.contributions ?? [])
+      .map((c) => c.author?.name ?? '')
+      .filter(Boolean);
+    try {
+      const { fetchGoogleBooksRating } = await import('./google-books');
+      const googleRating = await fetchGoogleBooksRating(book.title ?? '', authors);
+      if (googleRating != null) {
+        result.metadata.googleBooksRating = googleRating;
+      }
+    } catch (err) {
+      console.error('[Hardcover] Google Books rating fetch failed:', err);
+    }
+
+    return result;
   } catch {
     return null;
   }

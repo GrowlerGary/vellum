@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <circle cx="12" cy="13" r="10" fill="#FA320A"/>
+  <ellipse cx="12" cy="13" rx="7" ry="7.5" fill="#FA320A"/>
+  <path d="M10 4C10 4 8 2 10 1C12 0 13 2 12 3C14 2 15 4 13 5C11 4 10 4 10 4Z" fill="#00B528"/>
+  <text x="12" y="16" text-anchor="middle" fill="white" font-size="8" font-weight="bold" font-family="sans-serif">RT</text>
+</svg>
