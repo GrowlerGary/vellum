@@ -187,6 +187,7 @@ function SortableWantCategory({ type, initialEntries, isExpanded, onToggle }: So
                         rating={entry.rating}
                         href={`/item/${entry.id}`}
                         listeningProgress={entry.listeningProgress}
+                        metadata={entry.mediaItem.metadata}
                       />
                       <div className="flex justify-center">
                         <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
@@ -272,6 +273,7 @@ function DashboardSection({
                 rating={entry.rating}
                 href={`/item/${entry.id}`}
                 listeningProgress={entry.listeningProgress}
+                metadata={entry.mediaItem.metadata}
               />
               {showNextUp && (
                 <div className="flex justify-center">
