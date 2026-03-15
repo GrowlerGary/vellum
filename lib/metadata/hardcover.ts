@@ -28,6 +28,7 @@ interface HardcoverBook {
   title?: string;
   release_year?: number;
   pages?: number;
+  rating?: number;
   image?: { url?: string };
   description?: string;
   book_series?: Array<{ series?: { name?: string } }>;
@@ -68,6 +69,7 @@ function mapBook(book: HardcoverBook): HardcoverResult {
       authors: (book.contributions ?? []).map((c) => c.author?.name ?? "").filter(Boolean),
       series: (book.book_series ?? []).map((s) => s.series?.name ?? "").filter(Boolean),
       pages: book.pages ?? null,
+      hardcoverRating: book.rating ?? null,
     },
   };
 }
@@ -141,7 +143,7 @@ export async function getSimilarHardcover(externalId: string): Promise<Hardcover
     const detailQuery = `
       query SimilarBooks($ids: [Int!]!) {
         books(where: { id: { _in: $ids } }, limit: 8) {
-          id title release_year description
+          id title release_year description rating
           image { url }
           cached_tags
           contributions { author { name } }
@@ -161,7 +163,7 @@ export async function getHardcoverDetail(id: string): Promise<HardcoverResult | 
   const q = `
     query BookDetail($id: Int!) {
       books(where: { id: { _eq: $id } }, limit: 1) {
-        id title release_year description pages
+        id title release_year description pages rating
         image { url }
         cached_tags
         contributions { author { name } }

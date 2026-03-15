@@ -66,7 +66,8 @@ export async function backfillExternalRating(item: MediaItem): Promise<void> {
     }
 
     case 'BOOK': {
-      if (metadata.googleBooksRating != null) return
+      if (metadata.googleBooksRating != null || metadata.hardcoverRating != null) return
+      // Try Google Books first
       try {
         const { fetchGoogleBooksRating } = await import('./google-books')
         const authors = metadata.authors as string[] | undefined
@@ -76,9 +77,26 @@ export async function backfillExternalRating(item: MediaItem): Promise<void> {
             where: { id: item.id },
             data: { metadata: { ...metadata, googleBooksRating: rating } as object },
           })
+          return
         }
       } catch (err) {
         console.error('[backfill] Google Books fetch failed:', err)
+      }
+      // Fallback: fetch Hardcover rating
+      const hardcoverId = metadata.hardcoverId as number | undefined
+      if (hardcoverId) {
+        try {
+          const { getHardcoverDetail } = await import('./hardcover')
+          const detail = await getHardcoverDetail(String(hardcoverId))
+          if (detail?.metadata?.hardcoverRating != null) {
+            await db.mediaItem.update({
+              where: { id: item.id },
+              data: { metadata: { ...metadata, hardcoverRating: detail.metadata.hardcoverRating } as object },
+            })
+          }
+        } catch (err) {
+          console.error('[backfill] Hardcover rating fetch failed:', err)
+        }
       }
       break
     }

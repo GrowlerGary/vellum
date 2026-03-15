@@ -1,5 +1,3 @@
-import Image from 'next/image'
-
 interface ExternalRatingProps {
   mediaType: string
   metadata: Record<string, unknown>
@@ -17,14 +15,26 @@ function getRatingConfig(mediaType: string, metadata: Record<string, unknown>): 
   switch (mediaType) {
     case 'MOVIE':
     case 'TV_SHOW': {
-      const score = metadata.rottenTomatoesScore as number | undefined
-      if (score == null) return null
-      return {
-        icon: '/icons/rotten-tomatoes.svg',
-        alt: 'Rotten Tomatoes',
-        value: score,
-        display: `${Math.round(score)}%`,
+      const rtScore = metadata.rottenTomatoesScore as number | undefined
+      if (rtScore != null) {
+        return {
+          icon: '/icons/rotten-tomatoes.svg',
+          alt: 'Rotten Tomatoes',
+          value: rtScore,
+          display: `${Math.round(rtScore)}%`,
+        }
       }
+      // Fallback to TMDB vote average (0-10 scale)
+      const voteAvg = metadata.voteAverage as number | undefined
+      if (voteAvg != null && voteAvg > 0) {
+        return {
+          icon: '/icons/tmdb.svg',
+          alt: 'TMDB',
+          value: voteAvg,
+          display: `${voteAvg.toFixed(1)}/10`,
+        }
+      }
+      return null
     }
     case 'VIDEO_GAME': {
       const score = metadata.rating as number | undefined
@@ -47,14 +57,26 @@ function getRatingConfig(mediaType: string, metadata: Record<string, unknown>): 
       }
     }
     case 'BOOK': {
-      const score = metadata.googleBooksRating as number | undefined
-      if (score == null) return null
-      return {
-        icon: '/icons/google-books.svg',
-        alt: 'Google Books',
-        value: score,
-        display: `${score.toFixed(1)}/5`,
+      const googleScore = metadata.googleBooksRating as number | undefined
+      if (googleScore != null) {
+        return {
+          icon: '/icons/google-books.svg',
+          alt: 'Google Books',
+          value: googleScore,
+          display: `${googleScore.toFixed(1)}/5`,
+        }
       }
+      // Fallback to Hardcover rating (0-5 scale)
+      const hcScore = metadata.hardcoverRating as number | undefined
+      if (hcScore != null && hcScore > 0) {
+        return {
+          icon: '/icons/hardcover.svg',
+          alt: 'Hardcover',
+          value: hcScore,
+          display: `${hcScore.toFixed(1)}/5`,
+        }
+      }
+      return null
     }
     default:
       return null
@@ -70,7 +92,8 @@ export function ExternalRating({ mediaType, metadata, size = 'sm' }: ExternalRat
 
   return (
     <div className="flex items-center gap-1" title={`${config.alt}: ${config.display}`}>
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src={config.icon}
         alt={config.alt}
         width={iconSize}
