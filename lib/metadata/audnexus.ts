@@ -26,6 +26,7 @@ export interface AudnexusResult {
     subtitle: string | null
     publisherName: string | null
     language: string | null
+    rating: number | null
   }
 }
 
@@ -150,6 +151,7 @@ export async function getAudnexusDetail(asin: string): Promise<AudnexusResult | 
         subtitle: book.subtitle ?? null,
         publisherName: book.publisherName ?? null,
         language: book.language ?? null,
+        rating: book.rating ? parseFloat(book.rating) : null,
       },
     }
   } catch (err) {

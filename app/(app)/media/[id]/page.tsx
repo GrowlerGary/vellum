@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { redirect, notFound } from 'next/navigation'
 import MediaPreviewClient from './MediaPreviewClient'
+import { backfillExternalRating } from '@/lib/metadata/backfill-rating'
 
 export default async function MediaPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -9,7 +10,7 @@ export default async function MediaPreviewPage({ params }: { params: Promise<{ i
 
   const { id } = await params
 
-  const mediaItem = await db.mediaItem.findUnique({
+  let mediaItem = await db.mediaItem.findUnique({
     where: { id },
   })
 
@@ -21,6 +22,10 @@ export default async function MediaPreviewPage({ params }: { params: Promise<{ i
     select: { id: true },
   })
   if (entry) redirect(`/item/${entry.id}`)
+
+  // Lazy backfill: fetch external rating if missing from metadata
+  await backfillExternalRating(mediaItem)
+  mediaItem = await db.mediaItem.findUnique({ where: { id } }) ?? mediaItem
 
   return <MediaPreviewClient mediaItem={JSON.parse(JSON.stringify(mediaItem))} />
 }

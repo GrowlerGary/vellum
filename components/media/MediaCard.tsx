@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MEDIA_TYPE_ICONS, MEDIA_TYPE_LABELS, formatYear } from "@/lib/utils";
 import { StatusBadge } from "./StatusBadge";
 import { RatingDisplay } from "./RatingWidget";
+import { ExternalRating } from "./ExternalRating";
 
 interface ListeningProgressData {
   progress: number      // 0–1
@@ -21,6 +22,7 @@ interface MediaCardProps {
   onClick?: () => void;
   compact?: boolean;
   listeningProgress?: ListeningProgressData | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export function MediaCard({
@@ -36,6 +38,7 @@ export function MediaCard({
   onClick,
   compact = false,
   listeningProgress,
+  metadata,
 }: MediaCardProps) {
   const icon = MEDIA_TYPE_ICONS[mediaType] ?? "📦";
   const typeLabel = MEDIA_TYPE_LABELS[mediaType] ?? mediaType;
@@ -73,9 +76,14 @@ export function MediaCard({
           {icon} {typeLabel} {year ? `· ${formatYear(year)}` : ""}
         </p>
         <h3 className="text-sm font-semibold leading-tight text-zinc-900 line-clamp-2">{title}</h3>
-        {rating != null && (
-          <RatingDisplay value={rating} size="sm" />
-        )}
+        <div className="flex items-center gap-2">
+          {rating != null && (
+            <RatingDisplay value={rating} size="sm" />
+          )}
+          {metadata && (
+            <ExternalRating mediaType={mediaType} metadata={metadata} size="sm" />
+          )}
+        </div>
         {listeningProgress != null && (
           <div className="mt-1">
             {/* Progress bar */}

@@ -106,6 +106,7 @@ export default async function ProfilePage({ params }: Props) {
                       mediaType={entry.mediaItem.type}
                       status={entry.status ?? undefined}
                       rating={entry.rating}
+                      metadata={entry.mediaItem.metadata as Record<string, unknown>}
                     />
                   ))}
                 </div>

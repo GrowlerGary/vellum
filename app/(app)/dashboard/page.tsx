@@ -65,6 +65,7 @@ export default async function DashboardPage() {
         title: string;
         year: number | null;
         posterUrl: string | null;
+        metadata?: Record<string, unknown> | null;
       };
       listeningProgress: {
         progress: number;

@@ -11,6 +11,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
 import { MediaDetails } from '@/components/media/MediaDetails'
+import { ExternalRating } from '@/components/media/ExternalRating'
 
 export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem }) {
   const router = useRouter()
@@ -98,6 +99,12 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
               <span className="text-xs uppercase tracking-wide text-zinc-400">{mediaItem.source}</span>
             </p>
           </div>
+
+          <ExternalRating
+            mediaType={mediaItem.type}
+            metadata={mediaItem.metadata as unknown as Record<string, unknown>}
+            size="md"
+          />
 
           {mediaItem.genres && mediaItem.genres.length > 0 && (
             <div className="flex gap-2 flex-wrap">

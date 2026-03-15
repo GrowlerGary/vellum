@@ -34,6 +34,7 @@ interface MediaItemData {
   title: string
   year: number | null
   posterUrl: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 interface ListeningProgressData {
@@ -136,6 +137,7 @@ function SortableWantCategory({ type, initialEntries, isExpanded, onToggle }: So
         rating={entry.rating}
         href={`/item/${entry.id}`}
         listeningProgress={entry.listeningProgress}
+        metadata={entry.mediaItem.metadata}
       />
       <div className="flex justify-center">
         <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
