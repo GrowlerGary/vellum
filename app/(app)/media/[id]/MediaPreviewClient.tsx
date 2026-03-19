@@ -10,10 +10,11 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
+import { ShelfmarkSection } from '@/components/media/ShelfmarkSection'
 import { MediaDetails } from '@/components/media/MediaDetails'
 import { ExternalRating } from '@/components/media/ExternalRating'
 
-export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem }) {
+export default function MediaPreviewClient({ mediaItem, shelfmarkEnabled = false }: { mediaItem: MediaItem; shelfmarkEnabled?: boolean }) {
   const router = useRouter()
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -155,6 +156,14 @@ export default function MediaPreviewClient({ mediaItem }: { mediaItem: MediaItem
           <p className="text-zinc-700 leading-relaxed">{mediaItem.overview}</p>
         </section>
       )}
+
+      {/* Find on Shelfmark */}
+      <ShelfmarkSection
+        title={mediaItem.title}
+        author={(mediaItem.metadata as unknown as Record<string, unknown>)?.author as string | undefined}
+        mediaType={mediaItem.type}
+        shelfmarkEnabled={shelfmarkEnabled}
+      />
 
       {/* Similar Items */}
       <SimilarItemsSection

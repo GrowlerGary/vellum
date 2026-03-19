@@ -13,6 +13,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
 import { FixMatchSection } from '@/components/media/FixMatchSection'
+import { ShelfmarkSection } from '@/components/media/ShelfmarkSection'
 import { MediaDetails } from '@/components/media/MediaDetails'
 import { ExternalRating } from '@/components/media/ExternalRating'
 
@@ -21,7 +22,7 @@ type EntryWithRelations = MediaEntry & {
   listeningProgress: ListeningProgress | null
 }
 
-export default function ItemDetailClient({ entry }: { entry: EntryWithRelations }) {
+export default function ItemDetailClient({ entry, shelfmarkEnabled = false }: { entry: EntryWithRelations; shelfmarkEnabled?: boolean }) {
   const router = useRouter()
   const [status, setStatus] = useState<string | null>(entry.status)
   const [rating, setRating] = useState<number | null>(entry.rating)
@@ -218,6 +219,14 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
         mediaItemId={item.id}
         mediaSource={item.source}
         parentMediaType={item.type}
+      />
+
+      {/* Find on Shelfmark */}
+      <ShelfmarkSection
+        title={item.title}
+        author={(item.metadata as unknown as Record<string, unknown>)?.author as string | undefined}
+        mediaType={item.type}
+        shelfmarkEnabled={shelfmarkEnabled}
       />
 
       {/* Fix Match */}

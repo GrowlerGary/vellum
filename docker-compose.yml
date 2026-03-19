@@ -82,6 +82,14 @@ services:
       ABS_WEBHOOK_SECRET: ""
       STREMIO_WEBHOOK_SECRET: ""
 
+      # ---------------------------------------------------------------------------
+      # OPTIONAL — Shelfmark (book/audiobook search & download)
+      # Leave SHELFMARK_URL empty to disable.
+      # ---------------------------------------------------------------------------
+      SHELFMARK_URL: ${SHELFMARK_URL:-}
+      SHELFMARK_USERNAME: ${SHELFMARK_USERNAME:-}
+      SHELFMARK_PASSWORD: ${SHELFMARK_PASSWORD:-}
+
   # ---------------------------------------------------------------------------
   # OPTIONAL — Audiobookshelf real-time progress sidecar
   # Leave ABS_URL empty to disable this service.
