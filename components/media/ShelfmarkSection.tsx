@@ -16,6 +16,7 @@ interface ShelfmarkRelease {
   format?: string
   size?: string
   seeders?: number
+  metadata?: Record<string, unknown>
 }
 
 interface ShelfmarkSectionProps {
