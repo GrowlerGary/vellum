@@ -76,10 +76,6 @@ export function ShelfmarkSection({ title, author, mediaType, shelfmarkEnabled }:
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Only show for BOOK / AUDIOBOOK
-  if (mediaType !== 'BOOK' && mediaType !== 'AUDIOBOOK') return null
-  if (!shelfmarkEnabled) return null
-
   // Escape key to cancel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -160,6 +156,10 @@ export function ShelfmarkSection({ title, author, mediaType, shelfmarkEnabled }:
       setSending(false)
     }
   }
+
+  // Only show for BOOK / AUDIOBOOK
+  if (mediaType !== 'BOOK' && mediaType !== 'AUDIOBOOK') return null
+  if (!shelfmarkEnabled) return null
 
   // ── Idle ────────────────────────────────────────────────────────────────────
 
