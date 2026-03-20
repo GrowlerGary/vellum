@@ -171,22 +171,23 @@ export async function searchShelfmark(
     const booksToCheck = (books as Record<string, unknown>[]).slice(0, 5)
 
     for (const book of booksToCheck) {
-      const bookId = String(book.id ?? '')
-      const provider = String(book.provider ?? book.source ?? '')
+      // Shelfmark BookMetadata uses provider_id (not id) and authors (List[str], not author)
+      const bookId = String(book.provider_id ?? book.id ?? '')
+      const provider = String(book.provider ?? '')
       const bookTitle = String(book.title ?? '')
-      const bookAuthor = book.author ? String(book.author) : book.authors ? String(book.authors) : undefined
+      const authors = Array.isArray(book.authors) ? book.authors.map(String) : []
+      const bookAuthor = authors.length > 0 ? authors[0] : (book.author ? String(book.author) : undefined)
 
-      console.log(`[Shelfmark] book: id=${bookId} provider=${provider} title=${bookTitle}`)
+      console.log(`[Shelfmark] book: provider_id=${bookId} provider=${provider} title=${bookTitle} authors=${authors.join(', ')}`)
 
       if (!bookId || !provider) {
-        console.log('[Shelfmark] skipping book — missing id or provider')
+        console.log('[Shelfmark] skipping book — missing provider_id or provider')
         continue
       }
 
-      const relParams = new URLSearchParams({ provider, book_id: bookId })
+      const relParams = new URLSearchParams({ provider, book_id: bookId, content_type: contentType })
       if (bookTitle) relParams.set('title', bookTitle)
       if (bookAuthor) relParams.set('author', bookAuthor)
-      if (contentType === 'audiobook') relParams.set('content_type', 'audiobook')
 
       console.log(`[Shelfmark] fetching releases: /api/releases?${relParams}`)
       const relRes = await shelfmarkFetch(`/api/releases?${relParams}`, { method: 'GET' })
