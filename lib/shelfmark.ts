@@ -156,10 +156,10 @@ export async function searchShelfmark(
     const books = metaData.books ?? metaData.results ?? []
 
     console.log(`[Shelfmark] metadata search returned ${books.length} books`)
-    if (books.length > 0) {
-      const sample = books[0] as Record<string, unknown>
-      console.log('[Shelfmark] first book keys:', Object.keys(sample).join(', '))
-      console.log('[Shelfmark] first book:', JSON.stringify(sample).slice(0, 500))
+    for (let i = 0; i < Math.min(books.length, 5); i++) {
+      const b = books[i] as Record<string, unknown>
+      console.log(`[Shelfmark] book[${i}] keys:`, Object.keys(b).join(', '))
+      console.log(`[Shelfmark] book[${i}]:`, JSON.stringify(b).slice(0, 800))
     }
 
     if (books.length === 0) {
