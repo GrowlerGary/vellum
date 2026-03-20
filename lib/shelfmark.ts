@@ -155,8 +155,14 @@ export async function searchShelfmark(
     const metaData = await metaRes.json() as { books?: unknown[]; results?: unknown[] }
     const books = metaData.books ?? metaData.results ?? []
 
+    console.log(`[Shelfmark] metadata search returned ${books.length} books`)
+    if (books.length > 0) {
+      const sample = books[0] as Record<string, unknown>
+      console.log('[Shelfmark] first book keys:', Object.keys(sample).join(', '))
+      console.log('[Shelfmark] first book:', JSON.stringify(sample).slice(0, 500))
+    }
+
     if (books.length === 0) {
-      console.log('[Shelfmark] metadata search returned 0 results')
       return { releases: [] }
     }
 
@@ -165,22 +171,34 @@ export async function searchShelfmark(
     const booksToCheck = (books as Record<string, unknown>[]).slice(0, 5)
 
     for (const book of booksToCheck) {
-      const bookId = String(book.id ?? '')
-      const provider = String(book.provider ?? book.source ?? '')
+      // Shelfmark BookMetadata uses provider_id (not id) and authors (List[str], not author)
+      const bookId = String(book.provider_id ?? book.id ?? '')
+      const provider = String(book.provider ?? '')
       const bookTitle = String(book.title ?? '')
-      const bookAuthor = book.author ? String(book.author) : book.authors ? String(book.authors) : undefined
+      const authors = Array.isArray(book.authors) ? book.authors.map(String) : []
+      const bookAuthor = authors.length > 0 ? authors[0] : (book.author ? String(book.author) : undefined)
 
-      if (!bookId || !provider) continue
+      console.log(`[Shelfmark] book: provider_id=${bookId} provider=${provider} title=${bookTitle} authors=${authors.join(', ')}`)
 
-      const relParams = new URLSearchParams({ provider, book_id: bookId })
+      if (!bookId || !provider) {
+        console.log('[Shelfmark] skipping book — missing provider_id or provider')
+        continue
+      }
+
+      const relParams = new URLSearchParams({ provider, book_id: bookId, content_type: contentType })
       if (bookTitle) relParams.set('title', bookTitle)
       if (bookAuthor) relParams.set('author', bookAuthor)
 
+      console.log(`[Shelfmark] fetching releases: /api/releases?${relParams}`)
       const relRes = await shelfmarkFetch(`/api/releases?${relParams}`, { method: 'GET' })
-      if (!relRes || !relRes.ok) continue
+      if (!relRes || !relRes.ok) {
+        console.log(`[Shelfmark] release fetch failed: ${relRes?.status ?? 'null'}`)
+        continue
+      }
 
       const relData = await relRes.json() as { releases?: unknown[]; results?: unknown[] }
       const rawReleases = relData.releases ?? relData.results ?? []
+      console.log(`[Shelfmark] book ${bookId}: ${rawReleases.length} releases found`)
 
       for (const r of rawReleases as Record<string, unknown>[]) {
         allReleases.push({
