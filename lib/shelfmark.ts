@@ -228,7 +228,16 @@ export async function searchShelfmark(
       }
     }
 
+    // Log source + format breakdown for debugging
+    const sourceCounts: Record<string, number> = {}
+    const formatCounts: Record<string, number> = {}
+    for (const r of allReleases) {
+      sourceCounts[r.source || 'unknown'] = (sourceCounts[r.source || 'unknown'] ?? 0) + 1
+      formatCounts[r.format || 'none'] = (formatCounts[r.format || 'none'] ?? 0) + 1
+    }
     console.log(`[Shelfmark] search returned ${allReleases.length} releases`)
+    console.log(`[Shelfmark] by source:`, JSON.stringify(sourceCounts))
+    console.log(`[Shelfmark] by format:`, JSON.stringify(formatCounts))
     return { releases: allReleases }
   } catch (err) {
     console.error('[Shelfmark] search error:', err)
