@@ -190,7 +190,20 @@ export async function searchShelfmark(
       if (bookAuthor) relParams.set('author', bookAuthor)
 
       console.log(`[Shelfmark] fetching releases: /api/releases?${relParams}`)
-      const relRes = await shelfmarkFetch(`/api/releases?${relParams}`, { method: 'GET' })
+      const abortCtrl = new AbortController()
+      const timeout = setTimeout(() => abortCtrl.abort(), 15_000)
+      let relRes: Response | null
+      try {
+        relRes = await shelfmarkFetch(`/api/releases?${relParams}`, {
+          method: 'GET',
+          signal: abortCtrl.signal,
+        })
+      } catch {
+        console.log(`[Shelfmark] release fetch timed out for book ${bookId}`)
+        continue
+      } finally {
+        clearTimeout(timeout)
+      }
       if (!relRes || !relRes.ok) {
         console.log(`[Shelfmark] release fetch failed: ${relRes?.status ?? 'null'}`)
         continue
