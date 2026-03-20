@@ -53,7 +53,7 @@ async function authenticate(): Promise<string | null> {
     const res = await fetch(`${url}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, remember_me: true }),
       redirect: 'manual',
     })
 
@@ -74,8 +74,8 @@ async function authenticate(): Promise<string | null> {
       }
     }
 
-    // Cache for 55 minutes (typical Flask session is 60 min)
-    cookieExpiry = Date.now() + 55 * 60 * 1000
+    // Cache for 6 days (remember_me=true gives a 7-day Flask session)
+    cookieExpiry = Date.now() + 6 * 24 * 60 * 60 * 1000
     console.log('[Shelfmark] authenticated successfully')
     return cachedCookies
   } catch (err) {
@@ -149,8 +149,8 @@ export async function searchShelfmark(query: string): Promise<ShelfmarkSearchRes
       return { releases: [], error: `Shelfmark returned ${metaRes.status}` }
     }
 
-    const metaData = await metaRes.json() as { results?: unknown[]; books?: unknown[]; items?: unknown[] }
-    const books = metaData.results ?? metaData.books ?? metaData.items ?? []
+    const metaData = await metaRes.json() as { books?: unknown[]; results?: unknown[] }
+    const books = metaData.books ?? metaData.results ?? []
 
     if (books.length === 0) {
       console.log('[Shelfmark] metadata search returned 0 results')
