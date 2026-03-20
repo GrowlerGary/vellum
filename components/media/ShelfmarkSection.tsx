@@ -105,7 +105,10 @@ export function ShelfmarkSection({ title, author, mediaType, shelfmarkEnabled }:
       const res = await fetch('/api/shelfmark/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim() }),
+        body: JSON.stringify({
+          query: query.trim(),
+          contentType: mediaType === 'AUDIOBOOK' ? 'audiobook' : 'ebook',
+        }),
       })
       const data = await res.json() as { releases?: ShelfmarkRelease[]; error?: string }
       if (!res.ok || data.error) {
