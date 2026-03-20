@@ -6,6 +6,7 @@ import { isShelfmarkEnabled, searchShelfmark } from '@/lib/shelfmark'
 
 const SearchSchema = z.object({
   query: z.string().min(1),
+  contentType: z.enum(['ebook', 'audiobook']).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
-  const result = await searchShelfmark(parsed.data.query)
+  const result = await searchShelfmark(parsed.data.query, parsed.data.contentType ?? 'ebook')
 
   if (result.error) {
     return NextResponse.json({ releases: [], error: result.error }, { status: 502 })

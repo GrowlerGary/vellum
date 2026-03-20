@@ -124,7 +124,10 @@ async function shelfmarkFetch(
 
 // ── Search ────────────────────────────────────────────────────────────────────
 
-export async function searchShelfmark(query: string): Promise<ShelfmarkSearchResult> {
+export async function searchShelfmark(
+  query: string,
+  contentType: 'ebook' | 'audiobook' = 'ebook',
+): Promise<ShelfmarkSearchResult> {
   try {
     // Shelfmark search is a two-step process:
     // 1. GET /api/metadata/search — find books matching the query
@@ -135,7 +138,7 @@ export async function searchShelfmark(query: string): Promise<ShelfmarkSearchRes
       query,
       limit: '20',
       sort: 'relevance',
-      content_type: 'ebook',
+      content_type: contentType,
     })
     const metaRes = await shelfmarkFetch(`/api/metadata/search?${searchParams}`, {
       method: 'GET',
