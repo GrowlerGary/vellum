@@ -228,8 +228,18 @@ export async function searchShelfmark(
       }
     }
 
-    console.log(`[Shelfmark] search returned ${allReleases.length} releases`)
-    return { releases: allReleases }
+    // Filter by format when searching for audiobooks — Shelfmark doesn't always
+    // respect content_type on the releases endpoint
+    const AUDIO_FORMATS = new Set(['mp3', 'm4b', 'm4a', 'aac', 'flac', 'ogg', 'wma', 'wav'])
+    const filtered = contentType === 'audiobook'
+      ? allReleases.filter((r) => {
+          if (!r.format) return true // keep unknown-format releases (might be audio)
+          return AUDIO_FORMATS.has(r.format.toLowerCase())
+        })
+      : allReleases
+
+    console.log(`[Shelfmark] search returned ${allReleases.length} releases (${filtered.length} after format filter)`)
+    return { releases: filtered }
   } catch (err) {
     console.error('[Shelfmark] search error:', err)
     return { releases: [], error: 'Shelfmark is unreachable' }
