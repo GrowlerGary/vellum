@@ -50,7 +50,7 @@ async function authenticate(): Promise<string | null> {
 
   try {
     console.log('[Shelfmark] authenticating…')
-    const res = await fetch(`${url}/api/login`, {
+    const res = await fetch(`${url}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -126,36 +126,76 @@ async function shelfmarkFetch(
 
 export async function searchShelfmark(query: string): Promise<ShelfmarkSearchResult> {
   try {
-    const res = await shelfmarkFetch('/api/search', {
-      method: 'POST',
-      body: JSON.stringify({ query }),
+    // Shelfmark search is a two-step process:
+    // 1. GET /api/metadata/search — find books matching the query
+    // 2. GET /api/releases — find downloadable releases for a specific book
+    // We combine both steps: search metadata, then fetch releases for the top result.
+
+    const searchParams = new URLSearchParams({
+      query,
+      limit: '20',
+      sort: 'relevance',
+      content_type: 'ebook',
+    })
+    const metaRes = await shelfmarkFetch(`/api/metadata/search?${searchParams}`, {
+      method: 'GET',
     })
 
-    if (!res) return { releases: [], error: 'Shelfmark authentication failed' }
+    if (!metaRes) return { releases: [], error: 'Shelfmark authentication failed' }
 
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '')
-      console.error(`[Shelfmark] search failed: ${res.status}`, errBody)
-      return { releases: [], error: `Shelfmark returned ${res.status}` }
+    if (!metaRes.ok) {
+      const errBody = await metaRes.text().catch(() => '')
+      console.error(`[Shelfmark] metadata search failed: ${metaRes.status}`, errBody)
+      return { releases: [], error: `Shelfmark returned ${metaRes.status}` }
     }
 
-    const data = await res.json() as { releases?: unknown[]; results?: unknown[] }
-    const rawReleases = data.releases ?? data.results ?? []
+    const metaData = await metaRes.json() as { results?: unknown[]; books?: unknown[]; items?: unknown[] }
+    const books = metaData.results ?? metaData.books ?? metaData.items ?? []
 
-    const releases: ShelfmarkRelease[] = (rawReleases as Record<string, unknown>[]).map((r) => ({
-      id: String(r.id ?? ''),
-      source: String(r.source ?? ''),
-      sourceId: String(r.source_id ?? r.sourceId ?? ''),
-      title: String(r.title ?? ''),
-      author: r.author ? String(r.author) : undefined,
-      format: r.format ? String(r.format) : undefined,
-      size: r.size ? String(r.size) : r.file_size ? String(r.file_size) : undefined,
-      seeders: typeof r.seeders === 'number' ? r.seeders : undefined,
-      metadata: typeof r === 'object' ? (r as Record<string, unknown>) : undefined,
-    }))
+    if (books.length === 0) {
+      console.log('[Shelfmark] metadata search returned 0 results')
+      return { releases: [] }
+    }
 
-    console.log(`[Shelfmark] search returned ${releases.length} releases`)
-    return { releases }
+    // For each book result, try to fetch releases
+    const allReleases: ShelfmarkRelease[] = []
+    const booksToCheck = (books as Record<string, unknown>[]).slice(0, 5)
+
+    for (const book of booksToCheck) {
+      const bookId = String(book.id ?? '')
+      const provider = String(book.provider ?? book.source ?? '')
+      const bookTitle = String(book.title ?? '')
+      const bookAuthor = book.author ? String(book.author) : book.authors ? String(book.authors) : undefined
+
+      if (!bookId || !provider) continue
+
+      const relParams = new URLSearchParams({ provider, book_id: bookId })
+      if (bookTitle) relParams.set('title', bookTitle)
+      if (bookAuthor) relParams.set('author', bookAuthor)
+
+      const relRes = await shelfmarkFetch(`/api/releases?${relParams}`, { method: 'GET' })
+      if (!relRes || !relRes.ok) continue
+
+      const relData = await relRes.json() as { releases?: unknown[]; results?: unknown[] }
+      const rawReleases = relData.releases ?? relData.results ?? []
+
+      for (const r of rawReleases as Record<string, unknown>[]) {
+        allReleases.push({
+          id: String(r.id ?? r.guid ?? ''),
+          source: String(r.source ?? r.indexer ?? ''),
+          sourceId: String(r.source_id ?? r.sourceId ?? r.id ?? ''),
+          title: String(r.title ?? bookTitle),
+          author: bookAuthor,
+          format: r.format ? String(r.format) : undefined,
+          size: r.size ? String(r.size) : r.file_size ? String(r.file_size) : undefined,
+          seeders: typeof r.seeders === 'number' ? r.seeders : undefined,
+          metadata: typeof r === 'object' ? (r as Record<string, unknown>) : undefined,
+        })
+      }
+    }
+
+    console.log(`[Shelfmark] search returned ${allReleases.length} releases`)
+    return { releases: allReleases }
   } catch (err) {
     console.error('[Shelfmark] search error:', err)
     return { releases: [], error: 'Shelfmark is unreachable' }
@@ -168,15 +208,17 @@ export async function downloadFromShelfmark(
   release: Pick<ShelfmarkRelease, 'source' | 'sourceId' | 'title' | 'format' | 'metadata'>
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Shelfmark expects the full release object as the POST body
+    // (the frontend sends the entire release record it received from /api/releases)
+    const payload = release.metadata ?? {
+      source: release.source,
+      source_id: release.sourceId,
+      title: release.title,
+      format: release.format,
+    }
     const res = await shelfmarkFetch('/api/releases/download', {
       method: 'POST',
-      body: JSON.stringify({
-        source: release.source,
-        source_id: release.sourceId,
-        title: release.title,
-        format: release.format,
-        metadata: release.metadata,
-      }),
+      body: JSON.stringify(payload),
     })
 
     if (!res) return { success: false, error: 'Shelfmark authentication failed' }
