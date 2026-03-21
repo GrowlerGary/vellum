@@ -129,63 +129,11 @@ export async function searchShelfmark(
   contentType: 'ebook' | 'audiobook' = 'ebook',
 ): Promise<ShelfmarkSearchResult> {
   try {
-    // For audiobooks, use Shelfmark's browse mode — search Prowlarr directly by
-    // title with content_type=audiobook (category 3030).  The metadata-guided
-    // Universal flow only hits the direct_download source (Anna's Archive) which
-    // returns ebooks regardless of content_type.
-    if (contentType === 'audiobook') {
-      return searchShelfmarkBrowse(query, contentType)
-    }
-
-    // Ebooks: two-step Universal flow (metadata → releases across all sources)
     return searchShelfmarkUniversal(query, contentType)
   } catch (err) {
     console.error('[Shelfmark] search error:', err)
     return { releases: [], error: 'Shelfmark is unreachable' }
   }
-}
-
-/** Browse mode: search releases directly by title (no metadata lookup). */
-async function searchShelfmarkBrowse(
-  query: string,
-  contentType: 'ebook' | 'audiobook',
-): Promise<ShelfmarkSearchResult> {
-  const relParams = new URLSearchParams({
-    source: 'prowlarr',
-    content_type: contentType,
-    query,
-  })
-
-  console.log(`[Shelfmark] browse search: /api/releases?${relParams}`)
-  const abortCtrl = new AbortController()
-  const timeout = setTimeout(() => abortCtrl.abort(), 30_000)
-  let relRes: Response | null
-  try {
-    relRes = await shelfmarkFetch(`/api/releases?${relParams}`, {
-      method: 'GET',
-      signal: abortCtrl.signal,
-    })
-  } catch {
-    console.log('[Shelfmark] browse search timed out')
-    return { releases: [], error: 'Shelfmark search timed out' }
-  } finally {
-    clearTimeout(timeout)
-  }
-
-  if (!relRes) return { releases: [], error: 'Shelfmark authentication failed' }
-  if (!relRes.ok) {
-    const errBody = await relRes.text().catch(() => '')
-    console.error(`[Shelfmark] browse search failed: ${relRes.status}`, errBody)
-    return { releases: [], error: `Shelfmark returned ${relRes.status}` }
-  }
-
-  const relData = await relRes.json() as { releases?: unknown[]; results?: unknown[] }
-  const rawReleases = relData.releases ?? relData.results ?? []
-  console.log(`[Shelfmark] browse search returned ${rawReleases.length} releases`)
-
-  const releases = parseReleases(rawReleases as Record<string, unknown>[])
-  logReleaseBreakdown(releases)
-  return { releases }
 }
 
 /** Universal mode: metadata search → releases for each book result. */
@@ -221,7 +169,12 @@ async function searchShelfmarkUniversal(
   }
 
   const allReleases: ShelfmarkRelease[] = []
-  const booksToCheck = (books as Record<string, unknown>[]).slice(0, 3)
+  // For audiobooks (Prowlarr), only check the top result — Prowlarr searches by
+  // title/author so multiple Hardcover IDs would produce duplicate results.
+  // For ebooks (direct_download), check top 3 since each Hardcover ID may have
+  // different editions with unique direct links.
+  const maxBooks = contentType === 'audiobook' ? 1 : 3
+  const booksToCheck = (books as Record<string, unknown>[]).slice(0, maxBooks)
 
   for (const book of booksToCheck) {
     const bookId = String(book.provider_id ?? book.id ?? '')
@@ -233,12 +186,16 @@ async function searchShelfmarkUniversal(
     if (!bookId || !provider) continue
 
     const relParams = new URLSearchParams({ provider, book_id: bookId, content_type: contentType })
+    // For audiobooks, filter to Prowlarr source — direct_download only returns ebooks
+    if (contentType === 'audiobook') relParams.set('source', 'prowlarr')
     if (bookTitle) relParams.set('title', bookTitle)
     if (bookAuthor) relParams.set('author', bookAuthor)
 
     console.log(`[Shelfmark] fetching releases: /api/releases?${relParams}`)
     const abortCtrl = new AbortController()
-    const timeout = setTimeout(() => abortCtrl.abort(), 15_000)
+    // Prowlarr queries external indexers — give it more time than direct_download
+    const timeoutMs = contentType === 'audiobook' ? 30_000 : 15_000
+    const timeout = setTimeout(() => abortCtrl.abort(), timeoutMs)
     let relRes: Response | null
     try {
       relRes = await shelfmarkFetch(`/api/releases?${relParams}`, {
