@@ -212,6 +212,12 @@ export async function searchShelfmark(
       const relData = await relRes.json() as { releases?: unknown[]; results?: unknown[] }
       const rawReleases = relData.releases ?? relData.results ?? []
       console.log(`[Shelfmark] book ${bookId}: ${rawReleases.length} releases found`)
+      // Log first 3 raw release objects to see all available fields
+      for (let ri = 0; ri < Math.min(rawReleases.length, 3); ri++) {
+        const sample = rawReleases[ri] as Record<string, unknown>
+        console.log(`[Shelfmark] raw release[${ri}] keys:`, Object.keys(sample).join(', '))
+        console.log(`[Shelfmark] raw release[${ri}]:`, JSON.stringify(sample).slice(0, 600))
+      }
 
       for (const r of rawReleases as Record<string, unknown>[]) {
         allReleases.push({
