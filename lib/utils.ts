@@ -37,10 +37,10 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  WANT:        "bg-[#1a2c3a] text-[#7ab0cc] border border-[#254455]",
-  IN_PROGRESS: "bg-[#2c2410] text-[#c8a344] border border-[#4a3a18]",
-  COMPLETED:   "bg-[#142318] text-[#68aa6e] border border-[#224030]",
-  DROPPED:     "bg-[#2a1414] text-[#cc6e6e] border border-[#4a2020]",
+  WANT: "bg-blue-100 text-blue-800",
+  IN_PROGRESS: "bg-yellow-100 text-yellow-800",
+  COMPLETED: "bg-green-100 text-green-800",
+  DROPPED: "bg-red-100 text-red-800",
 };
 
 export const MEDIA_TYPE_ICONS: Record<string, string> = {

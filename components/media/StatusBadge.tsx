@@ -7,12 +7,12 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  if (!status) return null;
+  if (!status) return null
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-        STATUS_COLORS[status] ?? "bg-[var(--bg-overlay)] text-[var(--text-muted)] border border-[var(--border)]",
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        STATUS_COLORS[status] ?? "bg-zinc-100 text-zinc-700",
         className
       )}
     >

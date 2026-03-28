@@ -45,58 +45,56 @@ export function MediaCard({
 
   const content = (
     <div
-      className={`group relative flex flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] transition-all duration-200 hover:border-[var(--gold-dim)] hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_var(--gold-dim),0_12px_32px_rgba(0,0,0,0.5)] ${onClick ? "cursor-pointer" : ""} ${compact ? "" : ""}`}
+      className={`group relative flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
     >
       {/* Poster */}
-      <div className="relative aspect-[2/3] overflow-hidden bg-[var(--bg-surface)]">
+      <div className={`relative bg-zinc-100 ${compact ? "aspect-[2/3]" : "aspect-[2/3]"} overflow-hidden`}>
         {posterUrl ? (
           <Image
             src={posterUrl}
             alt={title}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-cover transition-transform group-hover:scale-105"
             sizes="(max-width: 768px) 50vw, 200px"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-4xl opacity-20">
+          <div className="flex h-full items-center justify-center text-4xl text-zinc-300">
             {icon}
           </div>
         )}
-
-        {/* Gradient vignette on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-
         {status && (
-          <div className="absolute bottom-1.5 left-1.5">
+          <div className="absolute bottom-1 left-1">
             <StatusBadge status={status} />
           </div>
         )}
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-0.5 p-2">
-        <p className="text-[10px] uppercase tracking-widest text-[var(--text-dim)] font-medium">
-          {typeLabel}{year ? ` · ${formatYear(year)}` : ""}
+      <div className="flex flex-col gap-1 p-2">
+        <p className="text-xs text-zinc-500">
+          {icon} {typeLabel} {year ? `· ${formatYear(year)}` : ""}
         </p>
-        <h3 className="font-display text-sm font-semibold italic leading-snug text-[var(--text)] line-clamp-2">
-          {title}
-        </h3>
-        <div className="flex items-center gap-2 mt-0.5">
-          {rating != null && <RatingDisplay value={rating} size="sm" />}
-          {metadata && <ExternalRating mediaType={mediaType} metadata={metadata} size="sm" />}
+        <h3 className="text-sm font-semibold leading-tight text-zinc-900 line-clamp-2">{title}</h3>
+        <div className="flex items-center gap-2">
+          {rating != null && (
+            <RatingDisplay value={rating} size="sm" />
+          )}
+          {metadata && (
+            <ExternalRating mediaType={mediaType} metadata={metadata} size="sm" />
+          )}
         </div>
-
         {listeningProgress != null && (
-          <div className="mt-1.5">
-            <div className="h-0.5 w-full overflow-hidden rounded-full bg-[var(--border-strong)]">
+          <div className="mt-1">
+            {/* Progress bar */}
+            <div className="h-1 w-full rounded-full bg-zinc-100 overflow-hidden">
               <div
-                className="h-full rounded-full bg-[var(--gold)] transition-all duration-300"
+                className="h-full rounded-full bg-indigo-500 transition-all"
                 style={{ width: `${Math.min(100, Math.round(listeningProgress.progress * 100))}%` }}
               />
             </div>
             {listeningProgress.currentChapter && (
-              <p className="mt-0.5 truncate text-[10px] text-[var(--text-muted)]" title={listeningProgress.currentChapter}>
+              <p className="mt-0.5 text-[10px] text-zinc-400 truncate" title={listeningProgress.currentChapter}>
                 {listeningProgress.currentChapter}
               </p>
             )}
@@ -106,6 +104,8 @@ export function MediaCard({
     </div>
   );
 
-  if (href) return <Link href={href}>{content}</Link>;
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
   return content;
 }
