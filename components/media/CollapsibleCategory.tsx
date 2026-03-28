@@ -28,23 +28,23 @@ export function CollapsibleCategory({
   const label = MEDIA_TYPE_LABELS[mediaType] ?? mediaType
 
   return (
-    <div className="rounded-xl border border-zinc-100 bg-white p-3 shadow-sm">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3">
       <button
         onClick={toggle}
-        className="flex items-center gap-2 w-full text-left py-1 hover:bg-zinc-50 rounded-lg px-2 transition-colors"
+        className="flex items-center gap-2 w-full text-left py-1 rounded-lg px-2 transition-colors hover:bg-[var(--bg-overlay)]"
         aria-expanded={expanded}
       >
-        <span className="text-lg">{icon}</span>
-        <span className="font-semibold text-zinc-800">{label}</span>
-        <span className="text-sm text-zinc-400 ml-1">({children.length})</span>
-        <span className="ml-auto text-zinc-400">
+        <span className="text-base">{icon}</span>
+        <span className="font-display italic font-semibold text-[var(--text)]">{label}</span>
+        <span className="text-sm text-[var(--text-dim)] ml-1">({children.length})</span>
+        <span className="ml-auto text-[var(--text-muted)]">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
       </button>
 
       <div className="mt-2">
         {expanded ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 stagger-children animate-fade-up">
             {children}
           </div>
         ) : (

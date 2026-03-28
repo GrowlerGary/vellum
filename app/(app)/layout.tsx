@@ -7,9 +7,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) redirect("/login");
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-[var(--bg)]">
       <NavbarWrapper username={session.user.username} role={session.user.role} />
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6">
+      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-8 animate-fade-in">
         {children}
       </main>
     </div>
