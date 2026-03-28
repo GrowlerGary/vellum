@@ -146,20 +146,20 @@ function SortableWantCategory({ type, initialEntries, isExpanded, onToggle }: So
   ))
 
   return (
-    <div className="rounded-xl border border-zinc-100 bg-white p-3 shadow-sm">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3">
       {/* Header */}
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 w-full text-left py-1 hover:bg-zinc-50 rounded-lg px-2 transition-colors"
+        className="flex items-center gap-2 w-full text-left py-1 hover:bg-[var(--bg-overlay)] rounded-lg px-2 transition-colors"
         aria-expanded={isExpanded}
       >
-        <span className="text-lg">{icon}</span>
-        <span className="font-semibold text-zinc-800">{label}</span>
-        <span className="text-sm text-zinc-400 ml-1">({entries.length})</span>
+        <span className="text-base">{icon}</span>
+        <span className="font-display italic font-semibold text-[var(--text)]">{label}</span>
+        <span className="text-sm text-[var(--text-dim)] ml-1">({entries.length})</span>
         {isExpanded && (
-          <span className="ml-2 text-xs text-zinc-400 italic">drag to reorder</span>
+          <span className="ml-2 text-xs text-[var(--text-dim)] italic">drag to reorder</span>
         )}
-        <span className="ml-auto text-zinc-400">
+        <span className="ml-auto text-[var(--text-muted)]">
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
       </button>
@@ -239,7 +239,7 @@ function DashboardSection({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-zinc-900 mb-4">{title}</h2>
+      <h2 className="font-display text-xl italic font-semibold text-[var(--text)] mb-4 gold-line">{title}</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {activeTypes.map((type) => {
           const typeEntries = groups[type]
@@ -319,8 +319,8 @@ export function DashboardClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Welcome back, {userName}</h1>
-          <p className="text-zinc-500">Here&apos;s what you&apos;ve been up to</p>
+          <h1 className="font-display text-3xl italic font-semibold text-[var(--text)]">Welcome back, {userName}</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-0.5">Here&apos;s what you&apos;ve been up to</p>
         </div>
         <div className="flex gap-2">
           <Link href="/search">
@@ -341,11 +341,11 @@ export function DashboardClient({
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {statsByType.map((s) => (
-          <div key={s.type} className="rounded-xl border border-zinc-200 bg-white p-4">
-            <div className="text-2xl mb-1">{s.icon}</div>
-            <div className="text-sm font-medium text-zinc-700">{s.label}</div>
-            <div className="text-2xl font-bold text-zinc-900">{s.total}</div>
-            <div className="text-xs text-zinc-400 mt-1">
+          <div key={s.type} className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 transition-colors hover:border-[var(--border-strong)]">
+            <div className="text-xl mb-2 opacity-70">{s.icon}</div>
+            <div className="text-xs uppercase tracking-widest text-[var(--text-muted)] font-medium">{s.label}</div>
+            <div className="font-display text-3xl italic font-semibold text-[var(--gold)] mt-0.5">{s.total}</div>
+            <div className="text-xs text-[var(--text-dim)] mt-1">
               {s.completed} done · {s.inProgress} in progress
             </div>
           </div>
@@ -380,8 +380,8 @@ export function DashboardClient({
       {isEmpty && (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
           <div className="text-6xl">🎬</div>
-          <h2 className="text-xl font-semibold text-zinc-700">Nothing tracked yet</h2>
-          <p className="text-zinc-500 max-w-sm">
+          <h2 className="font-display text-2xl italic font-semibold text-[var(--text)]">Nothing tracked yet</h2>
+          <p className="text-[var(--text-muted)] max-w-sm">
             Start by searching for a movie, book, game, or any other media you&apos;ve consumed.
           </p>
           <Link href="/search">
