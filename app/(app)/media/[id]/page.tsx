@@ -3,7 +3,6 @@ import { db } from '@/lib/db'
 import { redirect, notFound } from 'next/navigation'
 import MediaPreviewClient from './MediaPreviewClient'
 import { backfillExternalRating } from '@/lib/metadata/backfill-rating'
-import { isShelfmarkEnabled } from '@/lib/shelfmark'
 
 export default async function MediaPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -28,5 +27,5 @@ export default async function MediaPreviewPage({ params }: { params: Promise<{ i
   await backfillExternalRating(mediaItem)
   mediaItem = await db.mediaItem.findUnique({ where: { id } }) ?? mediaItem
 
-  return <MediaPreviewClient mediaItem={JSON.parse(JSON.stringify(mediaItem))} shelfmarkEnabled={isShelfmarkEnabled()} />
+  return <MediaPreviewClient mediaItem={JSON.parse(JSON.stringify(mediaItem))} />
 }

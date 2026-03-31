@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import ItemDetailClient from './ItemDetailClient'
 import { backfillExternalRating } from '@/lib/metadata/backfill-rating'
-import { isShelfmarkEnabled } from '@/lib/shelfmark'
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -34,5 +33,5 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     },
   })
 
-  return <ItemDetailClient entry={JSON.parse(JSON.stringify(updated ?? entry))} shelfmarkEnabled={isShelfmarkEnabled()} />
+  return <ItemDetailClient entry={JSON.parse(JSON.stringify(updated ?? entry))} />
 }
