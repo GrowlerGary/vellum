@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deriveShowStatus, mergeSeasonIntoCache, getAiredEpisodeCount } from '@/lib/seasons'
+import { deriveShowStatus, mergeSeasonIntoCache, getAiredEpisodeCount, enrichEntriesWithTvStatus } from '@/lib/seasons'
 
 describe('deriveShowStatus', () => {
   it('returns null when no episodes watched', () => {
@@ -90,5 +90,44 @@ describe('mergeSeasonIntoCache', () => {
     const result = mergeSeasonIntoCache(existing, newSeason)
     expect(result.seasons).toHaveLength(2)
     expect(result.seasons.map((s) => s.number)).toEqual([1, 2])
+  })
+})
+
+describe('enrichEntriesWithTvStatus', () => {
+  it('overrides status for TV_SHOW entries based on watch counts', () => {
+    const entries = [
+      {
+        id: '1',
+        status: 'COMPLETED' as const,
+        mediaItem: { type: 'TV_SHOW', metadata: {} },
+        _count: { episodeWatches: 5 },
+      },
+      {
+        id: '2',
+        status: 'WANT' as const,
+        mediaItem: { type: 'MOVIE', metadata: {} },
+        _count: { episodeWatches: 0 },
+      },
+    ]
+    const airedCounts = new Map([['1', 10]])
+    const result = enrichEntriesWithTvStatus(entries as never, airedCounts)
+
+    expect(result[0].status).toBe('IN_PROGRESS') // 5 of 10 watched
+    expect(result[1].status).toBe('WANT')         // movies unchanged
+  })
+
+  it('sets COMPLETED when all aired episodes watched', () => {
+    const entries = [
+      {
+        id: '1',
+        status: 'IN_PROGRESS' as const,
+        mediaItem: { type: 'TV_SHOW', metadata: {} },
+        _count: { episodeWatches: 10 },
+      },
+    ]
+    const airedCounts = new Map([['1', 10]])
+    const result = enrichEntriesWithTvStatus(entries as never, airedCounts)
+
+    expect(result[0].status).toBe('COMPLETED')
   })
 })
