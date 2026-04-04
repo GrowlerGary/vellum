@@ -12,6 +12,7 @@ import { ArrowLeft, Trash2, X } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SimilarItemsSection } from '@/components/media/SimilarItemsSection'
+import { SeasonSection } from '@/components/media/SeasonSection'
 import { FixMatchSection } from '@/components/media/FixMatchSection'
 import { MediaDetails } from '@/components/media/MediaDetails'
 import { ExternalRating } from '@/components/media/ExternalRating'
@@ -137,18 +138,30 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
           </div>
 
           {/* Status selector buttons */}
-          <div className="flex gap-2 flex-wrap">
-            {(['WANT', 'IN_PROGRESS', 'COMPLETED', 'DROPPED'] as const).map((s) => (
-              <Button
-                key={s}
-                variant={status === s ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleStatusChange(s)}
-              >
-                {STATUS_LABELS[s]}
-              </Button>
-            ))}
-          </div>
+          {item.type === 'TV_SHOW' ? (
+            <div className="space-y-1">
+              <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium">Status</p>
+              <p className="text-sm text-zinc-500 italic">Tracked automatically via episodes</p>
+              {status && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700">
+                  {STATUS_LABELS[status as keyof typeof STATUS_LABELS] ?? status}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="flex gap-2 flex-wrap">
+              {(['WANT', 'IN_PROGRESS', 'COMPLETED', 'DROPPED'] as const).map((s) => (
+                <Button
+                  key={s}
+                  variant={status === s ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleStatusChange(s)}
+                >
+                  {STATUS_LABELS[s]}
+                </Button>
+              ))}
+            </div>
+          )}
 
           {/* Dates */}
           <div className="text-xs text-zinc-400 space-y-1">
@@ -212,6 +225,14 @@ export default function ItemDetailClient({ entry }: { entry: EntryWithRelations 
           className="min-h-[120px]"
         />
       </section>
+
+      {/* Season/Episode Tracker */}
+      {item.type === 'TV_SHOW' && (
+        <SeasonSection
+          mediaItemId={item.id}
+          numberOfSeasons={(item.metadata as Record<string, unknown>).numberOfSeasons as number ?? 1}
+        />
+      )}
 
       {/* Similar Items */}
       <SimilarItemsSection
