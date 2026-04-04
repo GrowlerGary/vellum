@@ -20,7 +20,10 @@ export async function PUT(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const entry = await db.mediaEntry.findUnique({ where: { id } });
+  const entry = await db.mediaEntry.findUnique({
+    where: { id },
+    include: { mediaItem: true },
+  });
   if (!entry || entry.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -32,11 +35,15 @@ export async function PUT(
   }
 
   const { status, startedAt, completedAt, ...rest } = parsed.data;
+
+  // TV show status is derived from episode watches — ignore incoming status
+  const isTvShow = entry.mediaItem.type === "TV_SHOW";
+
   const updated = await db.mediaEntry.update({
     where: { id },
     data: {
       ...rest,
-      ...(status !== undefined ? { status: status === null ? null : status } : {}),
+      ...(!isTvShow && status !== undefined ? { status: status === null ? null : status } : {}),
       startedAt: startedAt ? new Date(startedAt) : undefined,
       completedAt: completedAt ? new Date(completedAt) : undefined,
     },

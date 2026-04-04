@@ -118,21 +118,39 @@ export async function POST(req: NextRequest) {
     update: {},
   });
 
-  // Create/update entry as COMPLETED
+  // Upsert entry — for TV shows, status is derived; for movies, set COMPLETED
   await db.mediaEntry.upsert({
     where: { userId_mediaItemId: { userId, mediaItemId: mediaItem.id } },
     create: {
       userId,
       mediaItemId: mediaItem.id,
-      status: "COMPLETED",
+      status: isMovie ? "COMPLETED" : null,
       isPublic: true,
-      completedAt: new Date(),
+      completedAt: isMovie ? new Date() : null,
     },
-    update: {
-      status: "COMPLETED",
-      completedAt: new Date(),
-    },
+    update: isMovie
+      ? { status: "COMPLETED", completedAt: new Date() }
+      : {},
   });
+
+  // For TV shows, record the specific episode watch
+  if (!isMovie && payload.episode?.season && payload.episode?.number) {
+    const seasonNum = payload.episode.season;
+    const episodeNum = payload.episode.number;
+
+    await db.episodeWatch.upsert({
+      where: {
+        userId_mediaItemId_season_episode: {
+          userId,
+          mediaItemId: mediaItem.id,
+          season: seasonNum,
+          episode: episodeNum,
+        },
+      },
+      create: { userId, mediaItemId: mediaItem.id, season: seasonNum, episode: episodeNum },
+      update: {},
+    });
+  }
 
   return NextResponse.json({ status: "ok", title, mediaType });
 }

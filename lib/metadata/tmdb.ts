@@ -56,6 +56,19 @@ interface TmdbCastMember {
   order: number;
 }
 
+export interface TmdbEpisode {
+  number: number
+  title: string
+  airDate: string | null
+  overview: string
+}
+
+export interface TmdbSeasonData {
+  number: number
+  name: string
+  episodes: TmdbEpisode[]
+}
+
 interface TmdbCrewMember {
   name: string;
   job: string;
@@ -219,4 +232,37 @@ export async function getTmdbDetail(
       episodeRunTime: item.episode_run_time?.[0] ?? null,
     },
   };
+}
+
+export async function getTmdbSeason(
+  tmdbId: string,
+  seasonNumber: number
+): Promise<TmdbSeasonData | null> {
+  const url = `${TMDB_BASE}/tv/${tmdbId}/season/${seasonNumber}`
+  try {
+    const res = await fetch(url, { headers: getHeaders() })
+    if (!res.ok) return null
+    const data = await res.json() as {
+      season_number: number
+      name: string
+      episodes: Array<{
+        episode_number: number
+        name: string
+        air_date: string | null
+        overview: string
+      }>
+    }
+    return {
+      number: data.season_number,
+      name: data.name,
+      episodes: (data.episodes ?? []).map((ep) => ({
+        number: ep.episode_number,
+        title: ep.name,
+        airDate: ep.air_date ?? null,
+        overview: ep.overview ?? '',
+      })),
+    }
+  } catch {
+    return null
+  }
 }

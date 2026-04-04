@@ -6,6 +6,7 @@ import { getTmdbDetail } from "@/lib/metadata/tmdb";
 import { getHardcoverDetail } from "@/lib/metadata/hardcover";
 import { getAudnexusDetail } from "@/lib/metadata/audnexus";
 import { getIgdbDetail } from "@/lib/metadata/igdb";
+import { getAiredEpisodeCount, enrichEntriesWithTvStatus } from "@/lib/seasons";
 
 const createEntrySchema = z.object({
   mediaItem: z.object({
@@ -45,6 +46,44 @@ export async function GET(req: NextRequest) {
     include: { mediaItem: true },
     orderBy: { updatedAt: "desc" },
   });
+
+  // For TV shows, compute status from episode watch counts
+  const tvEntries = entries.filter((e) => e.mediaItem.type === "TV_SHOW");
+  const airedCountsMap = new Map<string, number>();
+
+  if (tvEntries.length > 0) {
+    const tvMediaItemIds = tvEntries.map((e) => e.mediaItemId);
+
+    // Fetch episode watch counts per mediaItemId for this user
+    const watchCounts = await db.episodeWatch.groupBy({
+      by: ["mediaItemId"],
+      where: { userId: session.user.id, mediaItemId: { in: tvMediaItemIds } },
+      _count: { id: true },
+    });
+    const watchCountMap = new Map(watchCounts.map((w) => [w.mediaItemId, w._count.id]));
+
+    // Fetch season caches to compute aired episode counts
+    const caches = await db.seasonCache.findMany({
+      where: { mediaItemId: { in: tvMediaItemIds } },
+      select: { mediaItemId: true, data: true },
+    });
+    const today = new Date().toISOString().split("T")[0];
+
+    for (const entry of tvEntries) {
+      const cache = caches.find((c) => c.mediaItemId === entry.mediaItemId);
+      const seasons = ((cache?.data as unknown as { seasons: Array<{ number: number; name: string; episodes: Array<{ number: number; title: string; airDate: string | null; overview: string }> }> } | null)?.seasons) ?? [];
+      airedCountsMap.set(entry.id, getAiredEpisodeCount(seasons, today));
+    }
+
+    // Attach watch counts to entries for enrichment
+    const enrichedEntries = entries.map((e) => ({
+      ...e,
+      _count: { episodeWatches: watchCountMap.get(e.mediaItemId) ?? 0 },
+    }));
+
+    const result = enrichEntriesWithTvStatus(enrichedEntries as never, airedCountsMap);
+    return NextResponse.json(result);
+  }
 
   return NextResponse.json(entries);
 }

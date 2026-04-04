@@ -61,6 +61,7 @@ model User {
   lists           MediaList[]
   scrobbleConfigs ScrobbleConfig[]
   aiSuggestions   AiSuggestion[]
+  episodeWatches  EpisodeWatch[]
 
   @@index([username])
   @@index([email])
@@ -86,6 +87,8 @@ model MediaItem {
   listItems   ListItem[]
   suggestions AiSuggestion[]
   similarCache SimilarItemCache?
+  seasonCache    SeasonCache?
+  episodeWatches EpisodeWatch[]
 
   @@unique([source, externalId, type])
   @@index([type])
@@ -191,4 +194,28 @@ model SimilarItemCache {
   fetchedAt   DateTime @default(now())
 
   mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+}
+
+model SeasonCache {
+  id          String    @id @default(cuid())
+  mediaItemId String    @unique
+  data        Json
+  fetchedAt   DateTime  @default(now())
+
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+}
+
+model EpisodeWatch {
+  id          String   @id @default(cuid())
+  userId      String
+  mediaItemId String
+  season      Int
+  episode     Int
+  watchedAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mediaItemId, season, episode])
+  @@index([userId, mediaItemId])
 }
