@@ -24,7 +24,7 @@ import { StackedCards } from '@/components/media/StackedCards'
 import { SortableMediaCard } from '@/components/media/SortableMediaCard'
 import { SetNextUpButton } from '@/components/media/SetNextUpButton'
 import { DiscoverSection } from '@/components/media/DiscoverSection'
-import { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS } from '@/lib/utils'
+import { cn, MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS } from '@/lib/utils'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +71,15 @@ function groupByType(entries: EntryData[]): Record<string, EntryData[]> {
   }
   return groups
 }
+
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'MOVIE', label: MEDIA_TYPE_LABELS['MOVIE'] },
+  { value: 'TV_SHOW', label: MEDIA_TYPE_LABELS['TV_SHOW'] },
+  { value: 'BOOK', label: MEDIA_TYPE_LABELS['BOOK'] },
+  { value: 'AUDIOBOOK', label: MEDIA_TYPE_LABELS['AUDIOBOOK'] },
+  { value: 'VIDEO_GAME', label: MEDIA_TYPE_LABELS['VIDEO_GAME'] },
+]
 
 // ── Sortable Want category (drag-and-drop when expanded) ─────────────────────
 
@@ -204,6 +213,7 @@ interface SectionProps {
   categoryOrder: string[]
   showNextUp?: boolean
   sortable?: boolean
+  activeFilter: string
 }
 
 function DashboardSection({
@@ -213,6 +223,7 @@ function DashboardSection({
   categoryOrder,
   showNextUp,
   sortable,
+  activeFilter: _activeFilter,
 }: SectionProps) {
   const [expandedTypes, setExpandedTypes] = useState<Record<string, boolean>>({})
 
@@ -302,6 +313,8 @@ export function DashboardClient({
   categoryOrder,
   isEmpty,
 }: DashboardClientProps) {
+  const [activeFilter, setActiveFilter] = useState<string>('all')
+
   return (
     <div className="flex flex-col gap-8">
       {/* Header */}
@@ -326,11 +339,32 @@ export function DashboardClient({
         </div>
       </div>
 
+      {/* Sticky type filter bar */}
+      <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-white/90 backdrop-blur-sm border-b border-zinc-100">
+        <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {FILTER_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setActiveFilter(value)}
+              className={cn(
+                'flex-shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors',
+                activeFilter === value
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <DashboardSection
         sectionKey="in-progress"
         title="Currently Consuming"
         entries={inProgress}
         categoryOrder={categoryOrder}
+        activeFilter={activeFilter}
       />
 
       <DashboardSection
@@ -340,6 +374,7 @@ export function DashboardClient({
         categoryOrder={categoryOrder}
         showNextUp
         sortable
+        activeFilter={activeFilter}
       />
 
       <DashboardSection
@@ -347,6 +382,7 @@ export function DashboardClient({
         title="Recently Consumed"
         entries={recentCompleted}
         categoryOrder={categoryOrder}
+        activeFilter={activeFilter}
       />
 
       <DiscoverSection />
