@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { MediaCard } from '@/components/media/MediaCard'
-import { StackedCards } from '@/components/media/StackedCards'
 import { MEDIA_TYPE_ICONS, MEDIA_TYPE_LABELS } from '@/lib/utils'
 import type { DiscoverItem } from '@/lib/discover'
 
@@ -94,15 +93,11 @@ function DiscoverTypeSection({ mediaType, items, isExpanded, onToggle }: Discove
         </span>
       </button>
 
-      <div className="mt-2">
-        {isExpanded ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {cards}
-          </div>
-        ) : (
-          <StackedCards maxVisible={2}>{cards}</StackedCards>
-        )}
-      </div>
+      {isExpanded && (
+        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {cards}
+        </div>
+      )}
     </div>
   )
 }
