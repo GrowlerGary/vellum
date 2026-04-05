@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,14 +21,21 @@ interface SearchResult {
   metadata: Record<string, unknown>;
 }
 
-export function MediaSearch() {
+interface MediaSearchProps {
+  initialQuery?: string;
+  initialType?: string;
+}
+
+export function MediaSearch({ initialQuery = "", initialType = "all" }: MediaSearchProps) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [type, setType] = useState("all");
+  const [query, setQuery] = useState(initialQuery);
+  const [type, setType] = useState(initialType);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialQueryRef = useRef(initialQuery);
+  const initialTypeRef = useRef(initialType);
 
   const search = useCallback(async (q: string, t: string) => {
     if (q.length < 2) { setResults([]); return; }
@@ -45,6 +52,12 @@ export function MediaSearch() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (initialQueryRef.current.length >= 2) {
+      search(initialQueryRef.current, initialTypeRef.current);
+    }
+  }, [search]); // search is stable (useCallback with [])
 
   function handleQueryChange(value: string) {
     setQuery(value);
