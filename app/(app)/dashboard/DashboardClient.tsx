@@ -51,22 +51,11 @@ interface EntryData {
   listeningProgress: ListeningProgressData | null
 }
 
-interface StatData {
-  type: string
-  label: string
-  icon: string
-  total: number
-  completed: number
-  inProgress: number
-  want: number
-}
-
 interface DashboardClientProps {
   userName: string
   inProgress: EntryData[]
   wantEntries: EntryData[]
   recentCompleted: EntryData[]
-  statsByType: StatData[]
   categoryOrder: string[]
   isEmpty: boolean
 }
@@ -310,7 +299,6 @@ export function DashboardClient({
   inProgress,
   wantEntries,
   recentCompleted,
-  statsByType,
   categoryOrder,
   isEmpty,
 }: DashboardClientProps) {
@@ -336,20 +324,6 @@ export function DashboardClient({
             </Button>
           </Link>
         </div>
-      </div>
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {statsByType.map((s) => (
-          <div key={s.type} className="rounded-xl border border-zinc-200 bg-white p-4">
-            <div className="text-2xl mb-1">{s.icon}</div>
-            <div className="text-sm font-medium text-zinc-700">{s.label}</div>
-            <div className="text-2xl font-bold text-zinc-900">{s.total}</div>
-            <div className="text-xs text-zinc-400 mt-1">
-              {s.completed} done · {s.inProgress} in progress
-            </div>
-          </div>
-        ))}
       </div>
 
       <DashboardSection
@@ -396,4 +370,3 @@ export function DashboardClient({
   )
 }
 
-export { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS }

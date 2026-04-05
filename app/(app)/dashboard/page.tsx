@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { MEDIA_TYPE_LABELS, MEDIA_TYPE_ICONS } from "@/lib/utils";
 import { DashboardClient } from "./DashboardClient";
 import { redirect } from "next/navigation";
 
@@ -39,19 +38,6 @@ export default async function DashboardPage() {
     .filter((e) => e.status === "COMPLETED")
     .slice(0, 12);
 
-  const statsByType = DEFAULT_CATEGORY_ORDER.map((type) => {
-    const typeEntries = entries.filter((e) => e.mediaItem.type === type);
-    return {
-      type,
-      label: MEDIA_TYPE_LABELS[type] ?? type,
-      icon: MEDIA_TYPE_ICONS[type] ?? "📦",
-      total: typeEntries.length,
-      completed: typeEntries.filter((e) => e.status === "COMPLETED").length,
-      inProgress: typeEntries.filter((e) => e.status === "IN_PROGRESS").length,
-      want: typeEntries.filter((e) => e.status === "WANT").length,
-    };
-  });
-
   // Serialize for client — strip Prisma internals, convert Dates to strings
   const serialize = (arr: typeof entries) =>
     JSON.parse(JSON.stringify(arr)) as {
@@ -79,7 +65,6 @@ export default async function DashboardPage() {
       inProgress={serialize(inProgress)}
       wantEntries={serialize(wantEntries)}
       recentCompleted={serialize(recentCompleted)}
-      statsByType={statsByType}
       categoryOrder={categoryOrder}
       isEmpty={entries.length === 0}
     />
