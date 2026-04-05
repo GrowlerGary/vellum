@@ -385,6 +385,7 @@ export function DashboardClient({
       </div>
 
       <DashboardSection
+        key={`in-progress-${activeFilter}`}
         sectionKey="in-progress"
         title="Currently Consuming"
         entries={inProgress}
@@ -393,6 +394,7 @@ export function DashboardClient({
       />
 
       <DashboardSection
+        key={`want-${activeFilter}`}
         sectionKey="want"
         title="Want to Consume"
         entries={wantEntries}
@@ -403,6 +405,7 @@ export function DashboardClient({
       />
 
       <DashboardSection
+        key={`completed-${activeFilter}`}
         sectionKey="completed"
         title="Recently Consumed"
         entries={recentCompleted}
