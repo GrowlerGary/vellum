@@ -102,7 +102,7 @@ async function igdbPost(endpoint: string, body: string): Promise<IgdbGame[]> {
 }
 
 export async function searchIgdb(query: string): Promise<IgdbResult[]> {
-  const body = `search "${query}"; fields name,summary,first_release_date,cover.image_id,screenshots.image_id,genres.name,rating; limit 10;`;
+  const body = `search "${query}"; fields name,summary,first_release_date,cover.image_id,screenshots.image_id,genres.name,rating; limit 20;`;
   const games = await igdbPost("games", body);
   return games.map(mapGame);
 }

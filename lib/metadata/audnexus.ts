@@ -97,7 +97,7 @@ interface AudnexusBookResponse {
 
 async function searchAudibleForAsins(query: string): Promise<string[]> {
   try {
-    const url = `https://api.audible.com/1.0/catalog/products?num_results=10&products_sort_by=Relevance&title=${encodeURIComponent(query)}`
+    const url = `https://api.audible.com/1.0/catalog/products?num_results=20&products_sort_by=Relevance&title=${encodeURIComponent(query)}`
     const res = await fetch(url)
     if (!res.ok) {
       console.error(`[Audible] search returned ${res.status}`)

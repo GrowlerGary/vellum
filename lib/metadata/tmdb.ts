@@ -170,7 +170,7 @@ export async function searchTmdb(query: string): Promise<TmdbResult[]> {
   return (data.results ?? [])
     .map(mapItem)
     .filter((x): x is TmdbResult => x !== null)
-    .slice(0, 10);
+    .slice(0, 20);
 }
 
 export async function getTmdbDetail(

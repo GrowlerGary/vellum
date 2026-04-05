@@ -91,7 +91,7 @@ async function gql<T>(query: string, variables: Record<string, unknown> = {}): P
 export async function searchHardcover(query: string): Promise<HardcoverResult[]> {
   const q = `
     query Search($q: String!) {
-      search(query: $q, query_type: "Book", per_page: 10) {
+      search(query: $q, query_type: "Book", per_page: 20) {
         results
       }
     }
