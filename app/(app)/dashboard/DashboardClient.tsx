@@ -223,15 +223,22 @@ function DashboardSection({
   categoryOrder,
   showNextUp,
   sortable,
-  activeFilter: _activeFilter,
+  activeFilter,
 }: SectionProps) {
+  // Filter entries by active type filter
+  const filteredEntries =
+    activeFilter === 'all'
+      ? entries
+      : entries.filter((e) => e.mediaItem.type === activeFilter)
+
+  // Section-level collapse: auto-collapse when no matching entries
+  const [manualCollapsed, setManualCollapsed] = useState(false)
+  const isCollapsed = filteredEntries.length === 0 ? true : manualCollapsed
+
   const [expandedTypes, setExpandedTypes] = useState<Record<string, boolean>>({})
 
-  if (entries.length === 0) return null
-
-  const groups = groupByType(entries)
+  const groups = groupByType(filteredEntries)
   const activeTypes = categoryOrder.filter((t) => (groups[t]?.length ?? 0) > 0)
-  if (activeTypes.length === 0) return null
 
   const toggleType = (type: string) => {
     setExpandedTypes((prev) => ({ ...prev, [type]: !prev[type] }))
@@ -239,66 +246,84 @@ function DashboardSection({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-zinc-900 mb-4">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {activeTypes.map((type) => {
-          const typeEntries = groups[type]
+      {/* Section header — always visible */}
+      <button
+        onClick={() => {
+          if (filteredEntries.length > 0) setManualCollapsed((v) => !v)
+        }}
+        className="flex items-center gap-2 w-full text-left mb-4 group"
+        aria-expanded={!isCollapsed}
+      >
+        <h2 className="text-lg font-semibold text-zinc-900">{title}</h2>
+        <span className="text-sm text-zinc-400">({filteredEntries.length})</span>
+        <span className="ml-auto text-zinc-400">
+          {isCollapsed ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronUp className="h-4 w-4" />
+          )}
+        </span>
+      </button>
 
-          // Want queue — sortable with DnD, but expand state lifted here for col-span
-          if (sortable) {
+      {!isCollapsed && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {activeTypes.map((type) => {
+            const typeEntries = groups[type]
+
+            if (sortable) {
+              const isExpanded = expandedTypes[type] ?? false
+              return (
+                <div key={`${sectionKey}-${type}`} className={isExpanded ? 'md:col-span-2' : ''}>
+                  <SortableWantCategory
+                    type={type}
+                    initialEntries={typeEntries}
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleType(type)}
+                  />
+                </div>
+              )
+            }
+
             const isExpanded = expandedTypes[type] ?? false
+            const cards = typeEntries.map((entry, idx) => (
+              <div key={entry.id} className="flex flex-col gap-1">
+                <MediaCard
+                  id={entry.mediaItem.id}
+                  title={entry.mediaItem.title}
+                  year={entry.mediaItem.year}
+                  posterUrl={entry.mediaItem.posterUrl}
+                  mediaType={entry.mediaItem.type}
+                  status={entry.status}
+                  rating={entry.rating}
+                  href={`/item/${entry.id}`}
+                  listeningProgress={entry.listeningProgress}
+                  metadata={entry.mediaItem.metadata}
+                />
+                {showNextUp && (
+                  <div className="flex justify-center">
+                    <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
+                  </div>
+                )}
+              </div>
+            ))
+
             return (
-              <div key={`${sectionKey}-${type}`} className={isExpanded ? 'md:col-span-2' : ''}>
-                <SortableWantCategory
-                  type={type}
-                  initialEntries={typeEntries}
+              <div
+                key={`${sectionKey}-${type}`}
+                className={isExpanded ? 'md:col-span-2' : ''}
+              >
+                <CollapsibleCategory
+                  mediaType={type}
                   isExpanded={isExpanded}
                   onToggle={() => toggleType(type)}
-                />
+                >
+                  {cards}
+                </CollapsibleCategory>
               </div>
             )
-          }
-
-          // Non-sortable: use CollapsibleCategory with stacked preview
-          const isExpanded = expandedTypes[type] ?? false
-          const cards = typeEntries.map((entry, idx) => (
-            <div key={entry.id} className="flex flex-col gap-1">
-              <MediaCard
-                id={entry.mediaItem.id}
-                title={entry.mediaItem.title}
-                year={entry.mediaItem.year}
-                posterUrl={entry.mediaItem.posterUrl}
-                mediaType={entry.mediaItem.type}
-                status={entry.status}
-                rating={entry.rating}
-                href={`/item/${entry.id}`}
-                listeningProgress={entry.listeningProgress}
-                metadata={entry.mediaItem.metadata}
-              />
-              {showNextUp && (
-                <div className="flex justify-center">
-                  <SetNextUpButton entryId={entry.id} isNextUp={idx === 0} />
-                </div>
-              )}
-            </div>
-          ))
-
-          return (
-            <div
-              key={`${sectionKey}-${type}`}
-              className={isExpanded ? 'md:col-span-2' : ''}
-            >
-              <CollapsibleCategory
-                mediaType={type}
-                isExpanded={isExpanded}
-                onToggle={() => toggleType(type)}
-              >
-                {cards}
-              </CollapsibleCategory>
-            </div>
-          )
-        })}
-      </div>
+          })}
+        </div>
+      )}
     </section>
   )
 }
